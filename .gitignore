@@ -66,5 +66,4 @@ next-env.d.ts
 /type-report.txt
 
 # Temporary QA output
-/qc/
-
+/qc
