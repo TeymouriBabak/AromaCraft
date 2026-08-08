@@ -31,7 +31,10 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
-.env*
+.env
+.env.local
+.env.*.local
+!.env.example
 
 # vercel
 .vercel
@@ -39,3 +42,29 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/src/generated/prisma
+
+# Local Docker database data
+/mariadb-local/
+
+# Local editor settings
+/.vscode/
+
+# Local backups
+/backups/
+
+# Temporary auth/debug artifacts
+/cookies.txt
+/headers.txt
+/login_body.txt
+/logout_body.txt
+/me_body.txt
+
+# Generated reports
+/lint-report.json
+/type-report.txt
+
+# Temporary QA output
+/qc/
+

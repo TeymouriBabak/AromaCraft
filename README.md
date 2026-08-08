@@ -1,36 +1,92 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AromaCraft
 
-## Getting Started
+AromaCraft is a fully local, offline-capable premium coffee storefront built with Next.js App Router, Prisma, and MariaDB.
 
-First, run the development server:
+## Local development
+
+1. Copy the example environment file:
+
+```bash
+cp .env.example .env
+```
+
+2. Start the local database:
+
+- With Docker:
+  ```bash
+  npm run db:docker
+  ```
+- Or with local MariaDB / WSL:
+  ```bash
+  bash scripts/setup-mariadb-dev.sh
+  ```
+
+3. Generate Prisma artifacts, sync the schema, and seed demo data:
+
+```bash
+npm run db:init
+```
+
+4. Start the app:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+5. Open the site in your browser:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```text
+http://localhost:3000
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Offline runtime and local assets
 
-## Learn More
+- All app images are served from `public/images/`.
+- The application uses a local font from `src/fonts/`.
+- No runtime image assets are fetched from remote CDNs.
+- Authentication is backed by Prisma sessions and a local MariaDB database.
 
-To learn more about Next.js, take a look at the following resources:
+## Database setup
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `docker-compose.yml` defines a local MariaDB service.
+- `scripts/setup-mariadb-dev.sh` creates the database and application user.
+- `scripts/verify-db-connection.mjs` validates the configured database connection.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Environment variables
 
-## Deploy on Vercel
+Use `.env.example` as a template. Sensitive values belong in `.env`, which is ignored by Git.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `DATABASE_URL` — Prisma connection string
+- `AUTH_SECRET` — route hint and session signing secret
+- `MYSQL_DATABASE` — MariaDB database name
+- `MYSQL_USER` — MariaDB application user
+- `MYSQL_PASSWORD` — MariaDB application user password
+- `MYSQL_ROOT_PASSWORD` — root password for local database initialization
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Useful scripts
+
+- `npm run dev` — start Next.js development server
+- `npm run build` — compile production build
+- `npm run start` — serve a built app
+- `npm run lint` — run ESLint
+- `npm run type-check` — run TypeScript checks
+- `npm run db:docker` — start the local MariaDB container
+- `npm run db:check` — verify database connectivity
+- `npm run db:init` — generate Prisma client, sync the database schema, and seed demo data
+- `npm run db:backup` — export the current local MariaDB database to `backups/`
+- `npm run db:restore` — restore the local MariaDB database from `backups/`
+
+## Backup and restore
+
+Local database backup and restore scripts are provided under `scripts/`:
+
+- `scripts/backup-mariadb.sh`
+- `scripts/restore-mariadb.sh`
+
+Use them to keep database snapshots locally without relying on external tooling.
+
+## Security and reliability
+
+- Session cookies are configured as `HttpOnly` and `Secure` in production.
+- The app uses `SameSite=Lax` for safe cross-site compatibility during development.
+- `.env` files are ignored and sensitive configuration should not be committed.
