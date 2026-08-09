@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, useReducedMotion } from 'framer-motion';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, CartesianGrid } from 'recharts';
@@ -11,8 +11,14 @@ import Skeleton from '@/components/Skeleton';
 import variants from '@/lib/motion-variants';
 import { formatCurrency } from '@/lib/currency';
 
-const buildSampleSpending = () => Array.from({ length: 12 }).map((_, i) => ({ month: `M${i + 1}`, spent: Math.round(Math.random() * 400 + 60) }));
-const buildSampleSessions = () => Array.from({ length: 30 }).map((_, i) => ({ day: `${i + 1}`, hours: Math.round(Math.random() * 3) }));
+type ActivityChartItem = { hour: string; minutes: number };
+type MonthlyActivityItem = { month: string; actions: number };
+
+type ActivityResponse = {
+  activity?: Array<{ id: string; title: string; date: string }>; 
+  charts?: { hourly?: ActivityChartItem[]; monthly?: MonthlyActivityItem[] };
+  summary?: { totalActions?: number; averageMinutes?: number };
+};
 
 export default function CustomerDashboard() {
   const router = useRouter();
@@ -20,9 +26,27 @@ export default function CustomerDashboard() {
   const { orders, loading: ordersLoading, error: ordersError } = useCustomerOrders();
   const { addItem } = useCart();
   const overview = data?.overview || data;
-  const sampleSpending = useMemo(() => buildSampleSpending(), []);
-  const sampleSessions = useMemo(() => buildSampleSessions(), []);
   const reduceMotion = useReducedMotion();
+  const [activityData, setActivityData] = useState<ActivityResponse | null>(null);
+  const [activityLoading, setActivityLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    fetch('/api/dashboard/customer/activity', { credentials: 'include' })
+      .then((response) => response.json())
+      .then((payload) => {
+        if (!mounted) return;
+        setActivityData(payload?.data ?? payload ?? null);
+      })
+      .finally(() => {
+        if (mounted) setActivityLoading(false);
+      });
+
+    return () => { mounted = false; };
+  }, []);
+
+  const hourlyChart = activityData?.charts?.hourly ?? [];
+  const monthlyChart = activityData?.charts?.monthly ?? [];
 
   const handleReorder = useCallback(
     (orderId: string) => {
@@ -30,8 +54,11 @@ export default function CustomerDashboard() {
       if (!order) return;
 
       order.items.forEach((item) => {
+        const productId = Number(item.productId);
+        if (!Number.isFinite(productId) || productId <= 0) return;
+
         addItem({
-          productId: item.productId,
+          productId,
           quantity: item.quantity,
           name: item.name,
           price: item.price,
@@ -65,36 +92,36 @@ export default function CustomerDashboard() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 mt-6">
-        <motion.div className="rounded-2xl bg-white p-4 shadow" initial={reduceMotion?{opacity:1,y:0}:{opacity:0,y:6}} animate={{ opacity: 1, y: 0 }} variants={variants.fadeUp}>
-          <h3 className="text-sm font-medium">Monthly Spending</h3>
+        <motion.div className="rounded-2xl bg-white p-4 shadow" initial={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} variants={variants.fadeUp}>
+          <h3 className="text-sm font-medium">Activity Minutes by Hour</h3>
           <div style={{ width: '100%', height: 200 }}>
             <ResponsiveContainer>
-              <AreaChart data={sampleSpending}>
+              <AreaChart data={hourlyChart.length ? hourlyChart : [{ hour: '00:00', minutes: 0 }] }>
                 <defs>
                   <linearGradient id="colorSpent" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#d4a373" stopOpacity={0.9} />
                     <stop offset="100%" stopColor="#1A120B" stopOpacity={0.1} />
                   </linearGradient>
                 </defs>
-                <XAxis dataKey="month" />
+                <XAxis dataKey="hour" />
                 <YAxis />
                 <Tooltip />
-                <Area type="monotone" dataKey="spent" stroke="#1A120B" fill="url(#colorSpent)" />
+                <Area type="monotone" dataKey="minutes" stroke="#1A120B" fill="url(#colorSpent)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </motion.div>
 
-        <motion.div className="rounded-2xl bg-white p-4 shadow" initial={reduceMotion?{opacity:1,y:0}:{opacity:0,y:6}} animate={{ opacity: 1, y: 0 }} variants={variants.fadeUp}>
-          <h3 className="text-sm font-medium">Daily Site Hours (30d)</h3>
+        <motion.div className="rounded-2xl bg-white p-4 shadow" initial={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} variants={variants.fadeUp}>
+          <h3 className="text-sm font-medium">Actions this quarter</h3>
           <div style={{ width: '100%', height: 200 }}>
             <ResponsiveContainer>
-              <BarChart data={sampleSessions}>
+              <BarChart data={monthlyChart.length ? monthlyChart : [{ month: 'Jan', actions: 0 }] }>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="day" />
+                <XAxis dataKey="month" />
                 <YAxis />
                 <Tooltip />
-                <Bar dataKey="hours" fill="#c9854d" />
+                <Bar dataKey="actions" fill="#c9854d" />
               </BarChart>
             </ResponsiveContainer>
           </div>

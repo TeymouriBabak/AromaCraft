@@ -5,8 +5,16 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import {
+  loginSchema,
+  normalizePhoneNumber,
+  signupSchema,
+  type LoginFormValues,
+  type SignupFormValues,
+  isPhoneNumberValid,
+  isSignupFormReady,
+} from "@/lib/auth-validation";
 import {
   ArrowRight,
   Eye,
@@ -25,9 +33,9 @@ import {
 } from "lucide-react";
 import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
-import { isValidPhoneNumber } from "libphonenumber-js";
 import { useAuth } from "@/components/auth-context";
 import { ForgotPasswordModal, ForgotUsernameModal } from "@/components/ForgotModals";
+import OtpInput from "@/components/otp-input";
 
 const genderOptions = ["Male", "Female", "Non-binary", "Prefer not to say", "Another identity"];
 
@@ -36,71 +44,22 @@ const loginModeOptions = [
   { id: "username", label: "Username + Password" },
 ] as const;
 
+const loginRoleOptions = [
+  { id: "customer", label: "Customer" },
+  { id: "manager", label: "Manager" },
+  { id: "admin", label: "Admin" },
+] as const;
+
 type LoginMode = (typeof loginModeOptions)[number]["id"];
+type LoginRole = (typeof loginRoleOptions)[number]["id"];
 
 type AuthView = "login" | "signup" | "recover-username" | "recover-password";
 
-type LoginFormValues = {
-  loginMode: LoginMode;
-  identifier: string;
-  password: string;
-};
-
-type SignupFormValues = {
-  firstName: string;
-  lastName: string;
-  gender: string;
-  username: string;
-  mobile: string;
-  email: string;
-  password: string;
-  confirmPassword: string;
-  avatarUrl?: string;
-};
-
 type AvailabilityState = "idle" | "checking" | "available" | "taken" | "invalid";
-
-const signupSchema = z
-  .object({
-    firstName: z.string().trim().min(1, "First name is required."),
-    lastName: z.string().trim().min(1, "Last name is required."),
-    gender: z.string().trim().min(1, "Choose a gender option."),
-    username: z
-      .string()
-      .trim()
-      .min(4, "Username must be at least 4 characters.")
-      .regex(/(?=.*[A-Z])/, "Username needs at least one uppercase letter.")
-      .regex(/(?=.*[a-z])/, "Username needs at least one lowercase letter.")
-      .regex(/(?=.*\d)/, "Username needs at least one digit."),
-    mobile: z.string().trim().min(1, "Mobile number is required."),
-    email: z.string().trim().email("Enter a valid email address."),
-    password: z
-      .string()
-      .min(8, "Password must be at least 8 characters.")
-      .regex(/[A-Z]/, "Password needs an uppercase letter.")
-      .regex(/[a-z]/, "Password needs a lowercase letter.")
-      .regex(/\d/, "Password needs a number.")
-      .regex(/[^A-Za-z0-9]/, "Password needs a special character."),
-    confirmPassword: z.string().trim().min(1, "Please confirm your password."),
-    avatarUrl: z.string().optional(),
-  })
-  .superRefine(({ mobile, password, confirmPassword }, ctx) => {
-    if (!isValidPhoneNumber(mobile)) {
-      ctx.addIssue({ path: ["mobile"], code: z.ZodIssueCode.custom, message: "Enter a valid phone number." });
-    }
-    if (password !== confirmPassword) {
-      ctx.addIssue({ path: ["confirmPassword"], code: z.ZodIssueCode.custom, message: "Passwords do not match." });
-    }
-  });
-
-const loginSchema = z.object({
-  loginMode: z.enum(["email", "username"]),
-  identifier: z.string().trim().min(1, "Please enter your email or username."),
-  password: z.string().trim().min(1, "Please enter your password."),
-});
 
 const defaultLoginValues: LoginFormValues = {
   loginMode: "email",
+  role: "customer",
   identifier: "",
   password: "",
 };
@@ -117,7 +76,7 @@ const defaultSignupValues: SignupFormValues = {
   avatarUrl: "",
 };
 
-const generateVerificationCode = () => String(Math.floor(10000000 + Math.random() * 90000000));
+const generateVerificationCode = () => String(Math.floor(100000 + Math.random() * 900000)).padStart(6, "0");
 
 export default function SecureAuthForm({ onAuthenticated }: { onAuthenticated?: (role?: string) => void } = {}) {
   const router = useRouter();
@@ -165,14 +124,16 @@ export default function SecureAuthForm({ onAuthenticated }: { onAuthenticated?: 
     handleSubmit: handleSignupSubmit,
     setValue: setSignupValue,
     control: signupControl,
-    formState: { errors: signupErrors, isValid: signupIsValid },
+    formState: { errors: signupErrors, isValid: signupIsValid, isSubmitting: signupSubmitting },
   } = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
     defaultValues: defaultSignupValues,
     mode: "onChange",
+    reValidateMode: "onChange",
   });
 
   const loginMode = useWatch({ control: loginControl, name: "loginMode", defaultValue: defaultLoginValues.loginMode });
+  const loginRole = useWatch({ control: loginControl, name: "role", defaultValue: defaultLoginValues.role });
   const signupValues = useWatch({ control: signupControl, defaultValue: defaultSignupValues }) as SignupFormValues;
   const signupPassword = signupValues.password ?? defaultSignupValues.password;
   const signupConfirmPassword = signupValues.confirmPassword ?? defaultSignupValues.confirmPassword;
@@ -219,17 +180,38 @@ export default function SecureAuthForm({ onAuthenticated }: { onAuthenticated?: 
 
   const isSignupReady = useMemo(() => {
     const values = signupValues;
-    const hasBase = Boolean(values.firstName && values.lastName && values.gender && values.username && values.email && values.password && values.confirmPassword);
-    const usernameOk = usernameRequirements.every((rule) => rule.valid);
-    const passwordOk = passwordRequirements.every((rule) => rule.valid);
-    const confirmOk = confirmPasswordState === "match";
-    const firstNameFree = firstNameStatus === "available";
-    const lastNameFree = lastNameStatus === "available";
-    const usernameFree = usernameStatus === "available";
-    const emailFree = emailStatus === "available";
-    const mobileFree = mobileStatus === "available";
-    return Boolean(hasBase && usernameOk && passwordOk && confirmOk && firstNameFree && lastNameFree && usernameFree && emailFree && mobileFree && signupIsValid);
-  }, [confirmPasswordState, emailStatus, firstNameStatus, lastNameStatus, mobileStatus, passwordRequirements, signupIsValid, signupValues, usernameRequirements, usernameStatus]);
+    const readiness = isSignupFormReady({
+      firstName: values.firstName ?? '',
+      lastName: values.lastName ?? '',
+      gender: values.gender ?? '',
+      username: values.username ?? '',
+      mobile: values.mobile ?? '',
+      email: values.email ?? '',
+      password: values.password ?? '',
+      confirmPassword: values.confirmPassword ?? '',
+      avatarUrl: values.avatarUrl ?? '',
+    });
+
+    const debugDisabledState = {
+      signupIsValid,
+      readiness,
+      firstName: Boolean(values.firstName?.trim()),
+      lastName: Boolean(values.lastName?.trim()),
+      gender: Boolean(values.gender?.trim()),
+      username: Boolean(values.username?.trim()),
+      mobile: Boolean(values.mobile?.trim()),
+      email: Boolean(values.email?.trim()),
+      password: Boolean(values.password?.trim()),
+      confirmPassword: Boolean(values.confirmPassword?.trim()),
+      avatarUrl: Boolean(values.avatarUrl?.trim()),
+    };
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.debug('[auth][signup][disabled-state]', debugDisabledState);
+    }
+
+    return readiness && signupIsValid;
+  }, [signupIsValid, signupValues]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -253,7 +235,19 @@ export default function SecureAuthForm({ onAuthenticated }: { onAuthenticated?: 
       } else if (!usernameRequirements.every((rule) => rule.valid)) {
         setUsernameStatus("invalid");
       } else {
-        setUsernameStatus("available");
+        // mark as checking then call server to confirm availability
+        setUsernameStatus("checking");
+        (async (value) => {
+          try {
+            const resp = await fetch(`/api/auth/check-username?username=${encodeURIComponent(value)}`);
+            const json = await resp.json();
+            if ((signupValues.username ?? "").trim() === value) {
+              setUsernameStatus(json?.ok && json.data && json.data.available ? "available" : "taken");
+            }
+          } catch {
+            if ((signupValues.username ?? "").trim() === value) setUsernameStatus("invalid");
+          }
+        })(usernameValue);
       }
 
       const emailValue = (signupValues.email ?? "").trim();
@@ -262,16 +256,38 @@ export default function SecureAuthForm({ onAuthenticated }: { onAuthenticated?: 
       } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue)) {
         setEmailStatus("invalid");
       } else {
-        setEmailStatus("available");
+        setEmailStatus("checking");
+        (async (value) => {
+          try {
+            const resp = await fetch(`/api/auth/check-email?email=${encodeURIComponent(value)}`);
+            const json = await resp.json();
+            if ((signupValues.email ?? "").trim() === value) {
+              setEmailStatus(json?.ok && json.data && json.data.available ? "available" : "taken");
+            }
+          } catch {
+            if ((signupValues.email ?? "").trim() === value) setEmailStatus("invalid");
+          }
+        })(emailValue);
       }
 
       const mobileValue = (signupValues.mobile ?? "").trim();
       if (!mobileValue) {
         setMobileStatus("idle");
-      } else if (!isValidPhoneNumber(mobileValue)) {
+      } else if (!isPhoneNumberValid(mobileValue)) {
         setMobileStatus("invalid");
       } else {
-        setMobileStatus("available");
+        setMobileStatus("checking");
+        (async (value) => {
+          try {
+            const resp = await fetch(`/api/auth/check-mobile?mobile=${encodeURIComponent(value)}`);
+            const json = await resp.json();
+            if ((signupValues.mobile ?? "").trim() === value) {
+              setMobileStatus(json?.ok && json.data && json.data.available ? "available" : "taken");
+            }
+          } catch {
+            if ((signupValues.mobile ?? "").trim() === value) setMobileStatus("invalid");
+          }
+        })(mobileValue);
       }
     }, 450);
 
@@ -282,7 +298,7 @@ export default function SecureAuthForm({ onAuthenticated }: { onAuthenticated?: 
     setSubmitState('loading');
     setIsSubmitting(true);
     setMessage(null);
-    const result = await login(values.identifier, values.password);
+    const result = await login(values.identifier, values.password, values.role);
     await new Promise((resolve) => window.setTimeout(resolve, 650));
     setMessage({ type: result.success ? 'success' : 'error', text: result.message });
     setSubmitState(result.success ? 'success' : 'idle');
@@ -318,19 +334,30 @@ export default function SecureAuthForm({ onAuthenticated }: { onAuthenticated?: 
     setIsSubmitting(true);
     setMessage(null);
     setVerificationError("");
-    const nextCode = generateVerificationCode();
+    if (process.env.NODE_ENV !== 'production') {
+      console.debug('[auth][signup][submit]', {
+        firstName: values.firstName,
+        lastName: values.lastName,
+        username: values.username,
+        email: values.email,
+        mobile: normalizePhoneNumber(values.mobile),
+        avatarUrl: values.avatarUrl || null,
+        isValid: signupIsValid,
+        isReady: isSignupReady,
+      });
+    }
+
     const result = await signup({
       ...values,
       avatarUrl: values.avatarUrl || undefined,
-      verificationCode: nextCode,
     });
     await new Promise((resolve) => window.setTimeout(resolve, 800));
     if (result.success) {
       setPendingEmail(values.email.toLowerCase());
-      setActiveVerificationCode(nextCode);
+      setActiveVerificationCode(result.verificationCode ?? '');
       setVerificationStep("verification");
       setSubmitState("success");
-      setMessage({ type: "success", text: "A verification email is on its way with your secure code." });
+      setMessage({ type: "success", text: "Your secure verification code is ready. Enter it to activate your account." });
       setIsSubmitting(false);
       return;
     }
@@ -340,8 +367,8 @@ export default function SecureAuthForm({ onAuthenticated }: { onAuthenticated?: 
   };
 
   const handleVerify = async () => {
-    if (!/^\d{8}$/.test(verificationCode)) {
-      setVerificationError("Enter the exact 8-digit verification code.");
+    if (!/^\d{6}$/.test(verificationCode)) {
+      setVerificationError("Enter the exact 6-digit verification code.");
       return;
     }
     setIsSubmitting(true);
@@ -389,11 +416,25 @@ export default function SecureAuthForm({ onAuthenticated }: { onAuthenticated?: 
     reader.onloadend = () => {
       const result = reader.result as string | null;
       if (result) {
-        setAvatarPreview(result);
-        setSignupValue("avatarUrl", result);
+        (async () => {
+          setAvatarPreview(result);
+          try {
+            const resp = await fetch('/api/auth/upload-avatar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imageDataUrl: result }) });
+            const json = await resp.json();
+            if (json?.ok && json.data && json.data.url) {
+              setAvatarPreview(json.data.url);
+              setSignupValue('avatarUrl', json.data.url);
+            } else {
+              // fallback to inline data URL
+              setSignupValue('avatarUrl', result);
+            }
+          } catch {
+            setSignupValue('avatarUrl', result);
+          }
+        })();
       }
     };
-    reader.readAsDataURL(file);
+                        reader.readAsDataURL(file);
   };
 
   const renderMessage = () => {
@@ -502,6 +543,22 @@ export default function SecureAuthForm({ onAuthenticated }: { onAuthenticated?: 
                 </div>
 
                 <form onSubmit={handleLoginSubmit(onLogin)} className="space-y-4">
+                  <div>
+                    <label className="mb-2 block text-sm font-semibold text-[#3d2d24] dark:text-[#f6e5d1]">Login as</label>
+                    <div className="flex flex-wrap gap-2">
+                      {loginRoleOptions.map((option) => (
+                        <button
+                          key={option.id}
+                          type="button"
+                          onClick={() => setLoginValue("role", option.id)}
+                          className={`rounded-full border px-3 py-2 text-sm transition ${loginRole === option.id ? "border-[#c9854d] bg-[#f7ebdb] text-[#1a0f0a]" : "border-[#d4a373]/25 bg-[#f9f6f0] text-[#6e4b33] dark:bg-[#23110c]"}`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <div>
                     <label className="mb-2 block text-sm font-semibold text-[#3d2d24] dark:text-[#f6e5d1]" htmlFor="login-identifier">
                       {loginMode === "email" ? "Email" : "Username"}
@@ -691,7 +748,7 @@ export default function SecureAuthForm({ onAuthenticated }: { onAuthenticated?: 
                             countryCallingCodeEditable={false}
                             limitMaxLength
                             value={field.value ?? ""}
-                            onChange={(value) => field.onChange(value ?? "")}
+                            onChange={(value) => field.onChange(normalizePhoneNumber(value ?? ""))}
                             className="w-full"
                             numberInputProps={{ className: "w-full bg-transparent text-sm outline-none" }}
                             onBlur={field.onBlur}
@@ -784,8 +841,21 @@ export default function SecureAuthForm({ onAuthenticated }: { onAuthenticated?: 
                         reader.onloadend = () => {
                           const result = reader.result as string | null;
                           if (result) {
-                            setAvatarPreview(result);
-                            setSignupValue("avatarUrl", result);
+                            (async () => {
+                              setAvatarPreview(result);
+                              try {
+                                const resp = await fetch('/api/auth/upload-avatar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imageDataUrl: result }) });
+                                const json = await resp.json();
+                                if (json?.ok && json.data && json.data.url) {
+                                  setAvatarPreview(json.data.url);
+                                  setSignupValue('avatarUrl', json.data.url);
+                                } else {
+                                  setSignupValue('avatarUrl', result);
+                                }
+                              } catch {
+                                setSignupValue('avatarUrl', result);
+                              }
+                            })();
                           }
                         };
                         reader.readAsDataURL(file);
@@ -816,7 +886,7 @@ export default function SecureAuthForm({ onAuthenticated }: { onAuthenticated?: 
                     type="submit"
                     whileHover={shouldReduceMotion ? undefined : { y: -2, scale: 1.01 }}
                     whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
-                    disabled={isSubmitting || !isSignupReady}
+                    disabled={isSubmitting || signupSubmitting || !isSignupReady}
                     className="flex w-full items-center justify-center rounded-full bg-[#e76f51] px-4 py-3 font-semibold text-white transition disabled:cursor-not-allowed disabled:bg-[#c7b39a]"
                   >
                     {isSubmitting ? (
@@ -845,7 +915,7 @@ export default function SecureAuthForm({ onAuthenticated }: { onAuthenticated?: 
                 <div className="rounded-[1.25rem] border border-[#d4a373]/20 bg-[#f9f6f0] p-4 dark:bg-[#23110c]">
                   <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[#b56e3b]">Verify your email</p>
                   <p className="mt-2 text-sm text-[#6e4b33] dark:text-[#e8d8c0]">
-                    Enter the 8-digit code we sent to {pendingEmail}.
+                    Enter the exact 6-digit code we sent to {pendingEmail}.
                   </p>
                   <div className="mt-3 rounded-2xl border border-[#d4a373]/20 bg-white/70 p-3 text-sm text-[#5f473d] dark:bg-[#29130d] dark:text-[#e8d8c0]">
                     <p className="font-semibold">Mock verification email</p>
@@ -855,17 +925,7 @@ export default function SecureAuthForm({ onAuthenticated }: { onAuthenticated?: 
                 </div>
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-[#3d2d24] dark:text-[#f6e5d1]" htmlFor="verification-code">Verification code</label>
-                  <input
-                    id="verification-code"
-                    value={verificationCode}
-                    onChange={(event) => {
-                      const next = event.target.value.replace(/\D/g, "").slice(0, 8);
-                      setVerificationCode(next);
-                      if (verificationError) setVerificationError("");
-                    }}
-                    placeholder="Enter 8 digits"
-                    className="w-full rounded-[1.25rem] border border-[#d4a373]/25 bg-[#f9f6f0] px-3 py-3 text-sm outline-none"
-                  />
+                  <OtpInput value={verificationCode} onChange={(value) => { setVerificationCode(value); if (verificationError) setVerificationError(""); }} error={Boolean(verificationError)} />
                   {verificationError ? <p className="mt-2 text-sm text-[#e76f51]">{verificationError}</p> : null}
                 </div>
                 {renderMessage()}

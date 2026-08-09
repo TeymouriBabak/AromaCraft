@@ -19,6 +19,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 import { products } from "@/data/products";
 import { useAuth } from "@/components/auth-context";
@@ -70,10 +71,9 @@ function SocialAction({ label, href, animationData }: { label: string; href: str
 
 export default function SiteShell({ children }: { children: React.ReactNode }) {
   const shouldReduceMotion = useReducedMotion();
-  const [darkMode, setDarkMode] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return window.localStorage.getItem("aromacraft-theme") === "dark";
-  });
+  const { resolvedTheme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  const darkMode = resolvedTheme === "dark";
   const [query, setQuery] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [announcementIndex, setAnnouncementIndex] = useState(0);
@@ -85,12 +85,14 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
   const { items, itemCount, subtotal, total, shipping, isOpen, closeCart, openCart, updateQuantity, hasHydrated: cartHydrated } = useCart();
 
   useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  }, [darkMode]);
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    const root = document.documentElement;
+    root.classList.toggle("dark", darkMode);
+  }, [darkMode, mounted]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -108,10 +110,7 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   const toggleTheme = () => {
-    const next = !darkMode;
-    setDarkMode(next);
-    document.documentElement.classList.toggle("dark", next);
-    window.localStorage.setItem("aromacraft-theme", next ? "dark" : "light");
+    setTheme(darkMode ? "light" : "dark");
   };
 
   const filteredProducts = products.filter((product) =>

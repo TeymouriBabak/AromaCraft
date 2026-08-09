@@ -1,4 +1,4 @@
-import { randomBytes, createHash } from 'crypto';
+import { randomBytes, createHash, randomUUID } from 'crypto';
 import { compare, hash } from 'bcryptjs';
 import { prisma } from './prisma';
 import type { UserRole } from '../generated/prisma/enums';
@@ -22,6 +22,7 @@ export type DbUserRecord = {
   mobile?: string | null;
   countryCode?: string | null;
   avatarUrl?: string | null;
+  emailVerified?: Date | string | null;
   createdAt?: Date | string;
   updatedAt?: Date | string;
 };
@@ -53,6 +54,7 @@ function mapUser(user: {
   mobile: string | null;
   countryCode: string | null;
   avatarUrl: string | null;
+  emailVerified: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }): DbUserRecord {
@@ -69,6 +71,7 @@ function mapUser(user: {
     mobile: user.mobile,
     countryCode: user.countryCode,
     avatarUrl: user.avatarUrl,
+    emailVerified: user.emailVerified,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };
@@ -123,6 +126,7 @@ export async function createDbUser(userData: {
         mobile: userData.mobile,
         countryCode: userData.countryCode,
         avatarUrl: userData.avatarUrl,
+        emailVerified: null,
       },
     });
     return mapUser(created);

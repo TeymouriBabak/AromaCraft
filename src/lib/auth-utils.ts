@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { randomUUID } from 'crypto';
 import {
   findUserByEmail as findMockUserByEmail,
   findUserByUsername as findMockUserByUsername,
@@ -7,7 +8,7 @@ import {
   User,
 } from './mock-auth';
 import { jsonError, jsonSuccess, getCookieValue, validateMethod, parseJsonBody } from './api-utils';
-import { isValidPhoneNumber, parsePhoneNumber } from 'libphonenumber-js';
+import { parsePhoneNumber } from 'libphonenumber-js';
 import {
   authenticateCredentials as authenticateDbUser,
   createDbSession,
@@ -20,7 +21,10 @@ import {
   revokeSessionsForUser,
   type DbUserRecord,
 } from './db-auth';
+import { Prisma } from '../generated/prisma/client';
+import { prisma } from './prisma';
 import { signRouteHint } from './route-auth';
+import { isPhoneNumberValid, normalizePhoneNumber } from './auth-validation';
 import { sendVerificationEmail } from './services/mailer';
 import { sendVerificationSMS } from './services/sms';
 
@@ -36,30 +40,85 @@ export type AuthPublicUser = {
   name?: string;
   firstName?: string;
   lastName?: string;
+  avatarUrl?: string;
+  emailVerified?: boolean;
+  mobile?: string;
+  countryCode?: string;
 };
 
-const verificationCodeStore = new Map<string, { code: string; expiresAt: number }>();
+const VERIFICATION_TTL_MS = 15 * 60 * 1000;
 
 function normalizeEmail(value: string) {
   return value.trim().toLowerCase();
 }
 
-function storeVerificationCode(email: string, code: string) {
-  verificationCodeStore.set(normalizeEmail(email), { code, expiresAt: Date.now() + 15 * 60 * 1000 });
+function generateOtp() {
+  return String(Math.floor(100000 + Math.random() * 900000)).padStart(6, '0');
 }
 
-function verifyStoredCode(email: string, code: string) {
-  const entry = verificationCodeStore.get(normalizeEmail(email));
-  if (!entry) return false;
-  if (Date.now() > entry.expiresAt) {
-    verificationCodeStore.delete(normalizeEmail(email));
-    return false;
+async function createVerificationToken(userId: string, type: 'EMAIL_VERIFICATION' | 'LOGIN_OTP' | 'PURCHASE_OTP', otp?: string) {
+  const token = randomUUID();
+  const expiresAt = new Date(Date.now() + VERIFICATION_TTL_MS);
+  return prisma.verificationToken.create({
+    data: { userId, type, token, otp, expiresAt },
+  });
+}
+
+async function findValidVerificationTokenByEmail(email: string, type: 'EMAIL_VERIFICATION' | 'LOGIN_OTP' | 'PURCHASE_OTP', otp: string) {
+  const normalized = normalizeEmail(email);
+  const user = await findDbUserByEmail(normalized).catch(() => null) ?? findMockUserByEmail(normalized);
+  if (!user) return null;
+  return prisma.verificationToken.findFirst({
+    where: {
+      userId: user.id,
+      type,
+      otp,
+      expiresAt: { gt: new Date() },
+      usedAt: null,
+    },
+  });
+}
+
+async function markTokenUsed(tokenId: string) {
+  return prisma.verificationToken.update({ where: { id: tokenId }, data: { usedAt: new Date() } });
+}
+
+export async function logUserActivity(
+  userId: string,
+  action: string,
+  metadata: Record<string, unknown> = {},
+  options: { durationMs?: number; sessionId?: string | null } = {},
+) {
+  try {
+    await prisma.userActivity.create({
+      data: {
+        userId,
+        action,
+        metadata: metadata as Prisma.InputJsonValue,
+        durationMs: options.durationMs ?? 0,
+        sessionId: options.sessionId ?? null,
+      },
+    });
+  } catch {
+    // ignore activity logging failures to avoid breaking core auth flows
   }
-  return entry.code === code;
 }
 
-function clearVerificationCode(email: string) {
-  verificationCodeStore.delete(normalizeEmail(email));
+function getOptionalUserField(user: User | DbUserRecord, field: 'avatarUrl' | 'mobile' | 'countryCode') {
+  if (field === 'avatarUrl') {
+    return 'avatarUrl' in user ? (user.avatarUrl ?? undefined) : undefined;
+  }
+  if (field === 'mobile') {
+    return 'mobile' in user ? (user.mobile ?? undefined) : undefined;
+  }
+  if (field === 'countryCode') {
+    return 'countryCode' in user ? (user.countryCode ?? undefined) : undefined;
+  }
+  return undefined;
+}
+
+function getEmailVerificationStatus(user: User | DbUserRecord) {
+  return 'emailVerified' in user ? Boolean(user.emailVerified) : false;
 }
 
 export function makePublicUser(user: User | DbUserRecord): AuthPublicUser {
@@ -71,6 +130,10 @@ export function makePublicUser(user: User | DbUserRecord): AuthPublicUser {
     name: user.name ?? undefined,
     firstName: user.firstName ?? undefined,
     lastName: user.lastName ?? undefined,
+    avatarUrl: getOptionalUserField(user, 'avatarUrl'),
+    emailVerified: getEmailVerificationStatus(user),
+    mobile: getOptionalUserField(user, 'mobile'),
+    countryCode: getOptionalUserField(user, 'countryCode'),
   };
 }
 
@@ -165,11 +228,12 @@ export async function authenticateCredentials(identifier: string, password: stri
 }
 
 function parseLoginBody(req: NextApiRequest) {
-  const jsonBody = parseJsonBody<{ identifier?: string; email?: string; username?: string; password?: string }>(req);
+  const jsonBody = parseJsonBody<{ identifier?: string; email?: string; username?: string; password?: string; role?: string }>(req);
   if (jsonBody && (jsonBody.identifier || jsonBody.email || jsonBody.username || jsonBody.password)) {
     return {
       identifier: jsonBody.identifier ?? jsonBody.email ?? jsonBody.username ?? '',
       password: jsonBody.password ?? '',
+      role: jsonBody.role ?? 'customer',
     };
   }
 
@@ -178,7 +242,8 @@ function parseLoginBody(req: NextApiRequest) {
     const params = new URLSearchParams(rawBody);
     const identifier = params.get('identifier') ?? params.get('email') ?? params.get('username') ?? '';
     const password = params.get('password') ?? '';
-    return { identifier, password };
+    const role = params.get('role') ?? 'customer';
+    return { identifier, password, role };
   }
 
   return null;
@@ -204,12 +269,21 @@ export async function handleLogin(req: NextApiRequest, res: NextApiResponse) {
     const user = await authenticateCredentials(body.identifier, body.password);
     if (!user) return jsonError(res, 'invalid_credentials', 'Invalid username/email or password.', 401);
 
+    const requestedRole = (body.role ?? 'customer').toLowerCase();
+    if (requestedRole && requestedRole !== user.role && requestedRole !== 'admin' && user.role !== requestedRole) {
+      return jsonError(res, 'forbidden', 'Selected login role does not match this account.', 403);
+    }
+    if (requestedRole && requestedRole !== user.role) {
+      return jsonError(res, 'forbidden', 'You do not have access with the selected role.', 403);
+    }
+
     const dbSession = await createDbSession(user.id, SESSION_TTL_SECONDS).catch(() => null);
     if (!dbSession) {
       return jsonError(res, 'session_error', 'Unable to create a database session.', 500);
     }
 
     await setSessionCookie(res, dbSession.token, Math.floor((dbSession.expiresAt.getTime() - Date.now()) / 1000), { id: user.id, role: user.role });
+    await logUserActivity(user.id, 'login', { method: 'email_or_username', username: user.username }, { durationMs: 0, sessionId: dbSession.sessionId });
     return jsonSuccess(res, { user: makePublicUser(user) }, 200);
   } catch (error) {
     return handleAuthServerError(res, error);
@@ -220,25 +294,24 @@ export async function handleResendVerification(req: NextApiRequest, res: NextApi
   const methodError = validateMethod(req, res, ['POST']);
   if (methodError) return methodError;
 
-  const body = parseJsonBody<{ email?: string; verificationCode?: string }>(req);
+  const body = parseJsonBody<{ email?: string }>(req);
   if (!body || !body.email) {
     return jsonError(res, 'invalid_request', 'Email is required.', 400);
   }
 
   const email = body.email.trim().toLowerCase();
-  const code = body.verificationCode?.trim();
   const user = await findKnownUserByEmail(email);
   if (!user) {
     return jsonError(res, 'invalid_request', 'Unable to generate verification code for this email.', 400);
   }
 
-  const nextCode = code && /^\d{8}$/.test(code) ? code : String(Math.floor(10000000 + Math.random() * 90000000));
-  storeVerificationCode(email, nextCode);
+  const nextCode = generateOtp();
+  await createVerificationToken(user.id, 'EMAIL_VERIFICATION', nextCode);
   void sendVerificationEmail(email, nextCode).catch(() => undefined);
   if ('mobile' in user && user.mobile) {
     void sendVerificationSMS(user.mobile, nextCode).catch(() => undefined);
   }
-  return jsonSuccess(res, { message: `Verification code resent to ${email}.`, code: nextCode }, 200);
+  return jsonSuccess(res, { message: `Verification code resent to ${email}.` }, 200);
 }
 
 export async function handleSignup(req: NextApiRequest, res: NextApiResponse) {
@@ -254,6 +327,7 @@ export async function handleSignup(req: NextApiRequest, res: NextApiResponse) {
       mobile?: string;
       email?: string;
       password?: string;
+      avatarUrl?: string;
       verificationCode?: string;
     }>(req);
 
@@ -268,6 +342,7 @@ export async function handleSignup(req: NextApiRequest, res: NextApiResponse) {
     const mobile = body.mobile?.trim();
     const email = body.email?.trim().toLowerCase();
     const password = body.password?.trim();
+    const avatarUrl = body.avatarUrl?.trim() || undefined;
     const verificationCode = body.verificationCode?.trim();
 
     if (!firstName || !lastName || !gender || !username || !mobile || !email || !password) {
@@ -289,16 +364,12 @@ export async function handleSignup(req: NextApiRequest, res: NextApiResponse) {
       return jsonError(res, 'conflict', 'An account with this email or username already exists.', 409);
     }
 
-    if (!isValidPhoneNumber(mobile)) {
+    if (!isPhoneNumberValid(mobile)) {
       return jsonError(res, 'invalid_request', 'Enter a valid phone number.', 400);
     }
 
-    const parsedPhone = parsePhoneNumber(mobile);
-    if (!parsedPhone) {
-      return jsonError(res, 'invalid_request', 'Enter a valid phone number.', 400);
-    }
-
-    const normalizedMobile = parsedPhone.number;
+    const normalizedMobile = normalizePhoneNumber(mobile);
+    const countryCode = normalizedMobile.startsWith('+') ? normalizedMobile.slice(1, 3) : undefined;
 
     const user = await createDbUser({
       username,
@@ -310,31 +381,24 @@ export async function handleSignup(req: NextApiRequest, res: NextApiResponse) {
       name: `${firstName} ${lastName}`,
       gender,
       mobile: normalizedMobile,
-      countryCode: parsedPhone.country ?? null,
+      countryCode: countryCode ?? null,
+      avatarUrl,
     });
 
     if (!user) {
       return jsonError(res, 'conflict', 'An account with this email or username already exists.', 409);
     }
 
-    let nextCode: string;
-    if (verificationCode) {
-      nextCode = verificationCode;
-      storeVerificationCode(email, verificationCode);
-    } else {
-      const generatedCode = String(Math.floor(10000000 + Math.random() * 90000000));
-      nextCode = generatedCode;
-      storeVerificationCode(email, generatedCode);
-    }
+    const nextCode = generateOtp();
+    await createVerificationToken(user.id, 'EMAIL_VERIFICATION', nextCode);
 
     // best-effort: send verification via email and SMS (development helpers)
     void sendVerificationEmail(email, nextCode).catch(() => undefined);
     if (user.mobile) void sendVerificationSMS(user.mobile, nextCode).catch(() => undefined);
 
-    const { sessionId, expiresAt } = await createDbSession(user.id, SESSION_TTL_SECONDS);
-    setSessionCookie(res, sessionId, Math.floor((expiresAt.getTime() - Date.now()) / 1000), { id: user.id, role: user.role });
+    await logUserActivity(user.id, 'signup', { username: user.username, email: user.email }, { sessionId: null });
 
-    return jsonSuccess(res, { user: makePublicUser(user), needsVerification: true }, 201);
+    return jsonSuccess(res, { user: makePublicUser(user), needsVerification: true, verificationCode: nextCode }, 201);
   } catch (error) {
     return handleAuthServerError(res, error);
   }
@@ -353,15 +417,23 @@ export async function handleVerifyAccount(req: NextApiRequest, res: NextApiRespo
   const code = body.code.trim();
   const user = await findKnownUserByEmail(email);
 
-  if (!user || !verifyStoredCode(email, code)) {
+  if (!user) {
     return jsonError(res, 'invalid_verification', 'The verification code is invalid or has expired.', 401);
   }
 
-  clearVerificationCode(email);
-  const { sessionId, expiresAt } = await createDbSession(user.id, SESSION_TTL_SECONDS);
-  setSessionCookie(res, sessionId, Math.floor((expiresAt.getTime() - Date.now()) / 1000), { id: user.id, role: user.role });
+  const verificationToken = await findValidVerificationTokenByEmail(email, 'EMAIL_VERIFICATION', code);
+  if (!verificationToken) {
+    return jsonError(res, 'invalid_verification', 'The verification code is invalid or has expired.', 401);
+  }
 
-  return jsonSuccess(res, { user: makePublicUser(user), verified: true }, 200);
+  await markTokenUsed(verificationToken.id);
+  await prisma.user.update({ where: { id: user.id }, data: { emailVerified: new Date() } });
+  const verifiedUser = await findDbUserById(user.id);
+  const dbSession = await createDbSession(user.id, SESSION_TTL_SECONDS);
+  await setSessionCookie(res, dbSession.token, Math.floor((dbSession.expiresAt.getTime() - Date.now()) / 1000), { id: user.id, role: user.role });
+  await logUserActivity(user.id, 'email_verified', { email }, { sessionId: dbSession.sessionId });
+
+  return jsonSuccess(res, { user: makePublicUser(verifiedUser ?? user), verified: true }, 200);
 }
 
 export async function handleLogout(req: NextApiRequest, res: NextApiResponse) {
@@ -401,6 +473,13 @@ export async function handleMe(req: NextApiRequest, res: NextApiResponse) {
       email: user.email,
       role: user.role,
       name: user.name ?? `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim(),
+      firstName: user.firstName ?? undefined,
+      lastName: user.lastName ?? undefined,
+      username: user.username,
+      avatarUrl: getOptionalUserField(user, 'avatarUrl'),
+      emailVerified: getEmailVerificationStatus(user),
+      mobile: getOptionalUserField(user, 'mobile'),
+      countryCode: getOptionalUserField(user, 'countryCode'),
     },
   });
 }

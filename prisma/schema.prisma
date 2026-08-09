@@ -29,22 +29,26 @@ enum OrderStatus {
 }
 
 model User {
-  id           String    @id @default(cuid())
-  username     String    @unique @db.VarChar(120)
-  name         String?
-  firstName    String?   @db.VarChar(120)
-  lastName     String?   @db.VarChar(120)
-  gender       String?   @db.VarChar(80)
-  mobile       String?   @db.VarChar(40)
-  countryCode  String?   @db.VarChar(10)
-  email        String    @unique
-  passwordHash String    @db.VarChar(255)
-  avatarUrl    String?   @db.VarChar(255)
-  role         UserRole  @default(CUSTOMER)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  sessions     Session[]
-  orders       Order[]
+  id             String          @id @default(cuid())
+  username       String          @unique @db.VarChar(120)
+  name           String?
+  firstName      String?         @db.VarChar(120)
+  lastName       String?         @db.VarChar(120)
+  gender         String?         @db.VarChar(80)
+  mobile         String?         @db.VarChar(40)
+  countryCode    String?         @db.VarChar(10)
+  email          String          @unique
+  passwordHash   String          @db.VarChar(255)
+  avatarUrl      String?         @db.VarChar(255)
+  emailVerified  DateTime?
+  role           UserRole        @default(CUSTOMER)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  sessions           Session[]
+  orders             Order[]
+  activities         UserActivity[]
+  reviews            Review[]
+  verificationTokens VerificationToken[]
 
   @@index([email])
   @@index([username])
@@ -94,6 +98,62 @@ model Order {
 
   @@index([userId])
   @@index([status])
+}
+
+model UserActivity {
+  id           String    @id @default(cuid())
+  userId       String
+  sessionId    String?
+  action       String    @db.VarChar(160)
+  metadata     Json?
+  durationMs   Int?      @default(0)
+  createdAt    DateTime  @default(now())
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model Review {
+  id          String    @id @default(cuid())
+  userId      String
+  productId   String?
+  rating      Int       @default(5)
+  title       String    @db.VarChar(160)
+  content     String    @db.Text
+  type        ReviewType @default(HOME)
+  createdAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([productId])
+}
+
+enum ReviewType {
+  HOME
+  PRODUCT
+}
+
+enum VerificationTokenType {
+  EMAIL_VERIFICATION
+  LOGIN_OTP
+  PURCHASE_OTP
+}
+
+model VerificationToken {
+  id        String                 @id @default(cuid())
+  userId    String
+  type      VerificationTokenType @default(EMAIL_VERIFICATION)
+  token     String                 @unique @db.VarChar(255)
+  otp       String?                @db.VarChar(6)
+  createdAt DateTime               @default(now())
+  expiresAt DateTime
+  usedAt    DateTime?
+  user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@index([expiresAt])
 }
 
 model OrderItem {

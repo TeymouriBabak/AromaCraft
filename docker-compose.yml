@@ -37,7 +37,7 @@ services:
     restart: unless-stopped
     command: ["sh", "-c", "node -e \"const http=require('http');const port=3000;http.createServer((req,res)=>{if(req.method==='POST'&&req.url==='/sms'){let body='';req.on('data',c=>body+=c);req.on('end',()=>{console.log('[mock-sms] POST /sms',body);res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({ok:true}));});}else{res.writeHead(404);res.end('Not Found');}}).listen(port);console.log('mock-sms listening on',port);\""]
     ports:
-      - "3000:3000"
+      - "3010:3000"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ || exit 1" ]
       interval: 10s

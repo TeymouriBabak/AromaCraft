@@ -7,9 +7,20 @@ import { ArrowRight, Sparkles, ShieldCheck } from "lucide-react";
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const isVerified = Boolean(user?.emailVerified);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
+      {!isVerified ? (
+        <div className="mb-6 rounded-2xl border border-[#d4a373]/20 bg-[#fff9f3] px-4 py-3 text-sm text-[#6e4b33] dark:bg-[#22110c] dark:text-[#f6e5d1]">
+          Your email is pending verification. Check your inbox for the secure verification code to unlock full dashboard access.
+        </div>
+      ) : (
+        <div className="mb-6 flex items-center gap-2 rounded-2xl border border-[#2f7d4a]/20 bg-[#f1fbf5] px-4 py-3 text-sm text-[#2f7d4a] dark:bg-[#122a1b] dark:text-[#bfe7c9]">
+          <span className="font-semibold">✓</span> Account verified
+        </div>
+      )}
+
       <motion.div
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}

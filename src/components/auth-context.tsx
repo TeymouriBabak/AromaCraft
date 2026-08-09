@@ -15,6 +15,7 @@ export type AuthUser = {
   email: string;
   role?: "customer" | "manager" | "admin";
   avatarUrl?: string;
+  emailVerified?: boolean;
   createdAt?: string;
 };
 
@@ -22,13 +23,14 @@ export type AuthResponse = {
   success: boolean;
   message: string;
   role?: "customer" | "manager" | "admin";
+  verificationCode?: string;
 };
 
 type AuthContextValue = {
   user: AuthUser | null;
   loading: boolean;
   isAuthenticated: boolean;
-  login: (identifier: string, password: string) => Promise<AuthResponse>;
+  login: (identifier: string, password: string, role?: "customer" | "manager" | "admin") => Promise<AuthResponse>;
   signup: (input: {
     firstName: string;
     lastName: string;
@@ -132,9 +134,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [loading, pathname, router, user]);
 
-  const login = useCallback(async (identifier: string, password: string): Promise<AuthResponse> => {
+  const login = useCallback(async (identifier: string, password: string, role?: "customer" | "manager" | "admin"): Promise<AuthResponse> => {
     try {
-      const data = await api.post<{ user?: AuthUser }>('/api/auth/login', { identifier, password });
+      const data = await api.post<{ user?: AuthUser }>('/api/auth/login', { identifier, password, role });
       const nextUser = data?.user ?? null;
       if (!nextUser) {
         return { success: false, message: 'Unable to sign in. Please check your credentials and try again.' };
@@ -163,10 +165,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     verificationCode?: string;
   }): Promise<AuthResponse> => {
     try {
-      const resp = await api.post<{ user?: AuthUser }>('/api/auth/signup', input);
+      const resp = await api.post<{ user?: AuthUser; verificationCode?: string }>('/api/auth/signup', input);
       if (resp && resp.user) {
-        setUser(resp.user);
-        return { success: true, message: `Your account is ready, ${resp.user.firstName || 'friend'}.` };
+        return {
+          success: true,
+          message: `Your account is ready, ${resp.user.firstName || 'friend'}.`,
+          verificationCode: resp.verificationCode,
+        };
       }
       return { success: false, message: 'Unable to create your account. Please try again.' };
     } catch (error) {

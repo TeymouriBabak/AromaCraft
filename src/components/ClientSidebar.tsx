@@ -24,6 +24,7 @@ export default function ClientSidebar() {
         <Link href="/" className="block rounded px-3 py-2 hover:bg-[#f4efe6]">Home</Link>
         <Link href="/shop" className="block rounded px-3 py-2 hover:bg-[#f4efe6]">Shop</Link>
         <Link href="/quiz" className="block rounded px-3 py-2 hover:bg-[#f4efe6]">Coffee Finder</Link>
+        <Link href="/reviews" className="block rounded px-3 py-2 hover:bg-[#f4efe6]">Reviews</Link>
         <Link href="/dashboard/customer" className="block rounded px-3 py-2 hover:bg-[#f4efe6]">Purchase History</Link>
         <button
           onClick={() => void logout()}
