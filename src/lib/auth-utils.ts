@@ -101,14 +101,58 @@ async function createVerificationToken(userId: string, type: 'EMAIL_VERIFICATION
     return entry;
   }
 
-  // Use a raw INSERT and SELECT using minimal columns so this works against
-  // databases that may lack newer columns. Avoid Prisma client create which
-  // can fail if the DB schema is older than the client schema.
-  const id = randomUUID();
-  let created: unknown = null;
-  await prisma.$executeRawUnsafe('INSERT INTO `VerificationToken` (`id`,`userId`,`type`,`token`,`createdAt`,`expiresAt`) VALUES (?,?,?,?,?,?)', id, userId, type, token, new Date(), expiresAt);
-  const rows = await prisma.$queryRawUnsafe('SELECT * FROM `VerificationToken` WHERE `id` = ?', id) as unknown[];
-  created = rows[0];
+    // Attempt to atomically invalidate existing tokens for this user/type and create the new token
+    const id = randomUUID();
+    const now = new Date();
+
+    // Prefer using Prisma client transaction which adapts to schema; compute otpHash ahead of time
+    let otpHash: string | null = null;
+    if (otp) {
+      try {
+        const { hashOtp } = await import('./auth/otp');
+        otpHash = await hashOtp(otp);
+      } catch {
+        otpHash = null;
+      }
+    }
+
+    try {
+      const created = await prisma.$transaction(async (tx) => {
+        // invalidate existing tokens for this user/type
+        await tx.verificationToken.updateMany({ where: { userId, type, usedAt: null, expiresAt: { gt: now } } as any, data: { usedAt: now, usedCount: { increment: 1 }, verified: false } as any });
+        // create new token (include otpHash if supported)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const data: any = { id, userId, type, token, createdAt: now, expiresAt };
+        if (otpHash) data.otpHash = otpHash;
+        return tx.verificationToken.create({ data });
+      });
+      // In development mode, also keep a copy in-memory for mock users/dev endpoints
+      if (process.env.NODE_ENV !== 'production' && otp) {
+        const entry = { id: randomUUID(), token, otp, otpHash: null, type, createdAt: new Date(), expiresAt, usedAt: null, attemptCount: 0, usedCount: 0 };
+        const list = mockVerificationStore.get(userId) ?? [];
+        list.unshift(entry);
+        mockVerificationStore.set(userId, list);
+      }
+      return created as unknown;
+    } catch (e) {
+      // Fallback: attempt raw SQL transaction to achieve atomic invalidation + insert (without otpHash)
+      try {
+        await prisma.$transaction([
+          prisma.$executeRawUnsafe('UPDATE `VerificationToken` SET `usedAt` = ?, `usedCount` = COALESCE(`usedCount`,0) + 1, `verified` = 0 WHERE `userId` = ? AND `type` = ? AND `usedAt` IS NULL AND `expiresAt` > ?', now, userId, type, now),
+          prisma.$executeRawUnsafe('INSERT INTO `VerificationToken` (`id`,`userId`,`type`,`token`,`createdAt`,`expiresAt`) VALUES (?,?,?,?,?,?)', id, userId, type, token, now, expiresAt),
+        ]);
+        if (otp && process.env.NODE_ENV !== 'production') {
+          const entry = { id: randomUUID(), token, otp, otpHash: null, type, createdAt: new Date(), expiresAt, usedAt: null, attemptCount: 0, usedCount: 0 };
+          const list = mockVerificationStore.get(userId) ?? [];
+          list.unshift(entry);
+          mockVerificationStore.set(userId, list);
+        }
+        const rows = await prisma.$queryRawUnsafe('SELECT * FROM `VerificationToken` WHERE `id` = ?', id) as unknown[];
+        return rows[0];
+      } catch {
+        return null;
+      }
+    }
 
   if (otp) {
     try {
@@ -513,8 +557,6 @@ export async function handleResendVerification(req: NextApiRequest, res: NextApi
     }
     console.warn('[resend] Redis check unavailable, continuing in dev mode');
   }
-
-  await invalidateExistingVerificationTokens(user.id, 'EMAIL_VERIFICATION');
 
   const nextCode = generateOtp();
   await createVerificationToken(user.id, 'EMAIL_VERIFICATION', nextCode);
