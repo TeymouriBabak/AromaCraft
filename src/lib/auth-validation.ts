@@ -2,7 +2,7 @@ import { parsePhoneNumber } from 'libphonenumber-js';
 import { z } from 'zod';
 
 export type LoginMode = 'email' | 'username';
-export type LoginRole = 'customer' | 'manager' | 'admin';
+export type LoginRole = 'customer' | 'manager' | 'admin' | 'super_admin';
 
 export type LoginFormValues = {
   loginMode: LoginMode;
@@ -25,7 +25,7 @@ export type SignupFormValues = {
 
 export const loginSchema = z.object({
   loginMode: z.enum(['email', 'username']),
-  role: z.enum(['customer', 'manager', 'admin']),
+  role: z.enum(['customer', 'manager', 'admin', 'super_admin']),
   identifier: z.string().trim().min(1, 'Please enter your email or username.'),
   password: z.string().trim().min(1, 'Please enter your password.'),
 });
@@ -88,7 +88,14 @@ export function normalizePhoneNumber(value: string): string {
   if (candidate.startsWith('00')) {
     candidate = `+${candidate.slice(2)}`;
   } else if (!candidate.startsWith('+')) {
-    candidate = `+${digitsOnly}`;
+    // Handle common local formats that start with a leading zero,
+    // e.g., Iranian mobiles like 09123456789 should normalize to +989123456789
+    if (/^0\d{10}$/.test(digitsOnly)) {
+      // assume Iran local mobile when 11 digits starting with 0
+      candidate = `+98${digitsOnly.slice(1)}`;
+    } else {
+      candidate = `+${digitsOnly}`;
+    }
   }
 
   try {

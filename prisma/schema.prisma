@@ -1,6 +1,7 @@
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
@@ -10,8 +11,8 @@ datasource db {
 
 enum UserRole {
   CUSTOMER
-  MANAGER
   ADMIN
+  SUPER_ADMIN
 }
 
 enum SessionStatus {
@@ -35,7 +36,7 @@ model User {
   firstName      String?         @db.VarChar(120)
   lastName       String?         @db.VarChar(120)
   gender         String?         @db.VarChar(80)
-  mobile         String?         @db.VarChar(40)
+  mobile         String?         @unique @db.VarChar(40)
   countryCode    String?         @db.VarChar(10)
   email          String          @unique
   passwordHash   String          @db.VarChar(255)
@@ -59,6 +60,7 @@ model Session {
   tokenHash String        @unique @db.VarChar(255)
   userId    String
   status    SessionStatus @default(ACTIVE)
+  isAuthenticated Boolean   @default(false)
   expiresAt DateTime
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
@@ -125,6 +127,10 @@ model Review {
   createdAt   DateTime  @default(now())
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  // OCL Rules:
+  // - rating must be between 1 and 5 (enforced at application level)
+  // - authorID (userId) must be valid and non-null
+  // - author must match session.user (enforced at application level)
   @@index([userId])
   @@index([productId])
 }
@@ -145,7 +151,10 @@ model VerificationToken {
   userId    String
   type      VerificationTokenType @default(EMAIL_VERIFICATION)
   token     String                 @unique @db.VarChar(255)
-  otp       String?                @db.VarChar(6)
+  otpHash   String?                @db.VarChar(255)
+  verified  Boolean                @default(false)
+  usedCount Int                    @default(0)
+  attemptCount Int                 @default(0)
   createdAt DateTime               @default(now())
   expiresAt DateTime
   usedAt    DateTime?

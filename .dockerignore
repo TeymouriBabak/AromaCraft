@@ -1,0 +1,17 @@
+node_modules
+.next
+.git
+.env*
+*.log
+coverage
+qc
+backups
+mariadb-local
+tmp-schema-query.sql
+npm-debug.log
+.vscode
+tests
+!tests/
+!tests/**
+*.tgz
+.DS_Store

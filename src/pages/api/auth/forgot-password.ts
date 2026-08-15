@@ -13,8 +13,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
 
   const user = findUserByEmail(email);
   if (user) {
-    const { token, expiresAt } = generateResetToken(user.id, 60 * 15);
-    console.log(`[dev-email] Reset link for ${user.email}: http://localhost:3000/auth/reset?token=${token} (expires ${new Date(expiresAt).toISOString()})`);
+    generateResetToken(user.id, 60 * 15);
     return jsonSuccess(res, { message: 'If an account exists with this email, a reset link has been dispatched.' }, 200);
   }
 

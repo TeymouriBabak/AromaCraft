@@ -21,6 +21,13 @@ function isPublicAssetRoute(pathname: string) {
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // Block /api/dev unless in development mode
+  if (pathname.startsWith('/api/dev')) {
+    if (process.env.NODE_ENV !== 'development') {
+      return new NextResponse('Not Found', { status: 404 });
+    }
+  }
+
   if (isPublicAssetRoute(pathname)) {
     return NextResponse.next();
   }

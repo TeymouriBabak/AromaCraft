@@ -4,7 +4,7 @@ export const AUTH_SECRET = process.env.AUTH_SECRET || 'development-auth-secret-c
 
 export type RouteHintPayload = {
   userId: string;
-  role: 'customer' | 'manager' | 'admin';
+  role: 'customer' | 'manager' | 'admin' | 'super_admin';
   exp?: number;
 };
 

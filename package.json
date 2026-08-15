@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev -H 127.0.0.1 -p 3000",
     "build": "next build",
-    "start": "next start -H 127.0.0.1 -p 3000",
+    "start": "next start -H 0.0.0.0 -p 3000",
+    "test": "tsx tests/auth-api.test.ts && tsx tests/auth-signup-flow.test.ts && tsx tests/review-destination.test.ts && tsx tests/security-guards.test.ts && tsx tests/dev-endpoint.test.ts",
     "lint": "eslint",
     "type-check": "tsc --noEmit",
     "db:docker": "docker compose up -d",
@@ -37,6 +38,7 @@
     "react-hook-form": "^7.83.0",
     "react-phone-number-input": "^3.4.17",
     "recharts": "^2.6.2",
+    "redis": "^4.7.1",
     "zod": "^3.25.76"
   },
   "devDependencies": {
@@ -49,7 +51,7 @@
     "eslint-config-next": "16.2.11",
     "prisma": "^6.19.3",
     "tailwindcss": "^4",
-    "tsx": "^4.23.5",
+    "tsx": "^4.23.12",
     "typescript": "^5"
   }
 }

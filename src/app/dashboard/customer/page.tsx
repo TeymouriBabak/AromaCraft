@@ -28,7 +28,6 @@ export default function CustomerDashboard() {
   const overview = data?.overview || data;
   const reduceMotion = useReducedMotion();
   const [activityData, setActivityData] = useState<ActivityResponse | null>(null);
-  const [activityLoading, setActivityLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
@@ -39,7 +38,7 @@ export default function CustomerDashboard() {
         setActivityData(payload?.data ?? payload ?? null);
       })
       .finally(() => {
-        if (mounted) setActivityLoading(false);
+        // no-op; we keep activity data updated and avoid unused loading flag
       });
 
     return () => { mounted = false; };

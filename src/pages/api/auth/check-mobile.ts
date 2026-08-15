@@ -14,7 +14,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const normalized = normalizePhoneNumber(mobileRaw);
     const user = await prisma.user.findFirst({ where: { mobile: normalized } }).catch(() => null);
     return jsonSuccess(res, { available: !Boolean(user) }, 200);
-  } catch (err) {
+  } catch {
     return jsonError(res, 'server_error', 'Unable to check mobile availability.', 500);
   }
 }

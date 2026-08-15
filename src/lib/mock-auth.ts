@@ -1,67 +1,40 @@
+/**
+ * Mock Authentication Utilities (Development Only)
+ * 
+ * This module provides mock auth functions for LOCAL development/testing.
+ * In production, all authentication routes through db-auth.ts using real database.
+ * 
+ * OCL: Mock/Fixture Isolation - All mock data centralized in src/lib/fixtures/
+ * 
+ * DEPRECATED: Use src/lib/fixtures/mock-users.ts for fixture data
+ * Keep this file for backward compatibility with existing code.
+ */
 import crypto from 'crypto';
+import {
+  MOCK_USERS,
+  findMockUserByEmail as findFixtureMockUserByEmail,
+  findMockUserByUsername as findFixtureMockUserByUsername,
+  findMockUserById as findFixtureMockUserById,
+  type MockUser,
+} from './fixtures/mock-users';
 
-export type Role = 'customer' | 'manager' | 'admin';
+export type Role = 'customer' | 'manager' | 'admin' | 'super_admin';
 
-export type User = {
-  id: string;
-  username: string;
-  email: string;
-  passwordHash: string; // for demo only
-  role: Role;
-  name?: string;
-  firstName?: string;
-  lastName?: string;
-};
+export type User = MockUser;
 
-const users: User[] = [
-  {
-    id: 'u_customer',
-    username: 'Tbabak',
-    email: 'tbabak@example.com',
-    passwordHash: 'Teymouribabak78#',
-    role: 'customer',
-    name: 'Babak Teymouri',
-    firstName: 'Babak',
-    lastName: 'Teymouri',
-  },
-  {
-    id: 'u_manager',
-    username: 'Admin_Aroma',
-    email: 'manager@aromacraft.test',
-    passwordHash: 'AromaAdmin2026#',
-    role: 'manager',
-    name: 'Aroma Sales Manager',
-    firstName: 'Aroma',
-    lastName: 'Manager',
-  },
-  {
-    id: 'u_admin',
-    username: 'Super_Aroma',
-    email: 'super@aromacraft.test',
-    passwordHash: 'SuperAroma2026#',
-    role: 'admin',
-    name: 'System Super Admin',
-    firstName: 'System',
-    lastName: 'Admin',
-  },
-];
+// Re-export for backward compatibility
+export const users: User[] = MOCK_USERS;
 
 export function findUserByEmail(emailOrId: string) {
-  const normalized = emailOrId.trim().toLowerCase();
-  return users.find(
-    (u) => u.email.toLowerCase() === normalized || u.id === emailOrId || u.username.toLowerCase() === normalized
-  );
+  return findFixtureMockUserByEmail(emailOrId) || findFixtureMockUserByUsername(emailOrId);
 }
 
 export function findUserByUsername(username: string) {
-  const normalized = username.trim().toLowerCase();
-  return users.find(
-    (u) => u.username.toLowerCase() === normalized || u.id === username || u.email.toLowerCase() === normalized
-  );
+  return findFixtureMockUserByUsername(username) || findFixtureMockUserByEmail(username);
 }
 
 export function findUserById(userId: string) {
-  return users.find((u) => u.id === userId);
+  return findFixtureMockUserById(userId);
 }
 
 export function createUser(userData: Omit<User, 'id'>) {
@@ -71,6 +44,7 @@ export function createUser(userData: Omit<User, 'id'>) {
   return nextUser;
 }
 
+// Token store for password reset (IN-MEMORY, development only)
 const tokenStore = new Map<string, { userId: string; expiresAt: number }>();
 
 export function generateResetToken(userId: string, ttlSeconds = 60 * 15) {

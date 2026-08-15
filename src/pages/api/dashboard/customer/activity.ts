@@ -3,9 +3,7 @@ import { requireRole } from '@/lib/auth-utils';
 import { jsonError, jsonSuccess } from '@/lib/api-utils';
 import { prisma } from '@/lib/prisma';
 
-function formatAxisLabel(date: Date) {
-  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(date);
-}
+// formatAxisLabel removed (unused)
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const auth = await requireRole(req, res, ['customer', 'manager', 'admin']);

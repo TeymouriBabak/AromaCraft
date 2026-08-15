@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
 import { Star } from "lucide-react";
 import { useAuth } from "@/components/auth-context";
 import { normalizeCommentDestination } from "@/lib/review-utils";
@@ -65,7 +64,7 @@ function ReviewList({ items }: { items: ReviewCard[] }) {
 }
 
 export default function ReviewsPage() {
-  const { user, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [reviews, setReviews] = useState<ReviewCard[]>(defaultReviews);
   const [destination, setDestination] = useState("home");
   const [rating, setRating] = useState(5);

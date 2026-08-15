@@ -1,9 +1,16 @@
+/**
+ * DEPRECATED: Backward compatibility wrapper
+ * Use src/lib/fixtures/mock-users.ts instead
+ */
+import { listMockUsers } from './fixtures/mock-users';
+
 export type DevUser = { id: string; username: string; email: string; role: string };
 
 export function devListUsers(): DevUser[] {
-  return [
-    { id: 'u_customer', username: 'Tbabak', email: 'tbabak@example.com', role: 'customer' },
-    { id: 'u_manager', username: 'Admin_Aroma', email: 'manager@aromacraft.test', role: 'manager' },
-    { id: 'u_admin', username: 'Super_Aroma', email: 'super@aromacraft.test', role: 'admin' },
-  ];
+  return listMockUsers().map((u) => ({
+    id: u.id,
+    username: u.username,
+    email: u.email,
+    role: u.role,
+  }));
 }

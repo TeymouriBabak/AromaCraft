@@ -1,6 +1,6 @@
 export type SecurityUser = {
   userId: string;
-  role: 'customer' | 'manager' | 'admin';
+  role: 'customer' | 'manager' | 'admin' | 'super_admin';
   isActive: boolean;
 };
 

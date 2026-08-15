@@ -1,32 +1,98 @@
 services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aromacraft-app
+    image: aromacraft_app:local
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      DATABASE_URL: "${DATABASE_URL:?DATABASE_URL must be set in .env}"
+      REDIS_URL: "redis://redis:6379"
+      DOCKER_ENVIRONMENT: "true"
+      SMS_MOCK_ENDPOINT: "http://mock-sms:3000/sms"
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      USE_MOCKS: ${USE_MOCKS}
+    volumes:
+      - ./:/usr/src/app:cached
+      - /usr/src/app/node_modules
+      - /usr/src/app/.next
+      - /usr/src/app/src/generated/prisma
+      - storage-vol:/usr/src/app/public/uploads
+    depends_on:
+      - mariadb
+      - redis
+      - mailpit
+      - mock-sms
+
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: aromacraft-test
+    image: aromacraft_test:local
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: ${NODE_ENV:-test}
+      DATABASE_URL: "${DATABASE_URL:?DATABASE_URL must be set in .env}"
+      REDIS_URL: "redis://redis:6379"
+      DOCKER_ENVIRONMENT: "true"
+      SMS_MOCK_ENDPOINT: "http://mock-sms:3000/sms"
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      USE_MOCKS: ${USE_MOCKS}
+    depends_on:
+      - mariadb
+      - redis
+      - mailpit
+      - mock-sms
+    command: ["npm", "test"]
+
   mariadb:
     image: mariadb:10.11
     container_name: aromacraft-mariadb
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-13781229}
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD must be set in .env}"
       MYSQL_DATABASE: ${MYSQL_DATABASE:-aromacraft}
       MYSQL_USER: ${MYSQL_USER:-aromacraft_user}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-13781229}
+      MYSQL_PASSWORD: "${MYSQL_PASSWORD:?MYSQL_PASSWORD must be set in .env}"
     ports:
       - "3307:3306"
     volumes:
       - aromacraft_mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-change_this_root_password}"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD must be set in .env}\" >/dev/null 2>&1 || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
 
-  mailhog:
-    image: mailhog/mailhog:latest
-    container_name: aromacraft-mailhog
+  redis:
+    image: redis:7-alpine
+    container_name: aromacraft-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: aromacraft-mailpit
     restart: unless-stopped
     ports:
       - "1025:1025" # SMTP
       - "8025:8025" # HTTP UI
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://127.0.0.1:8025/ || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8025/ >/dev/null 2>&1 || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -39,14 +105,17 @@ services:
     ports:
       - "3010:3000"
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ || exit 1" ]
+      test: ["CMD-SHELL", "wget -qO- --post-data='{}' http://127.0.0.1:3000/sms >/dev/null 2>&1 || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
 
 volumes:
   aromacraft_mysql_data:
+  redis-data:
+  storage-vol:
+    driver: local
 
 # Notes:
-# - MailHog provides a dev SMTP endpoint at smtp://mailhog:1025 and a web UI at http://localhost:8025
+# - Mailpit provides a dev SMTP endpoint at smtp://mailpit:1025 and a web UI at http://localhost:8025
 # - mock-sms listens on http://mock-sms:3000/sms and logs incoming POST bodies to container logs

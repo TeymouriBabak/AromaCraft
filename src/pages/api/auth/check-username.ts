@@ -15,7 +15,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const mockUser = findMockUserByUsername(username);
     const exists = Boolean(dbUser) || Boolean(mockUser);
     return jsonSuccess(res, { available: !exists }, 200);
-  } catch (err) {
+  } catch {
     return jsonError(res, 'server_error', 'Unable to check username availability.', 500);
   }
 }

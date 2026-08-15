@@ -30,7 +30,7 @@ type AuthContextValue = {
   user: AuthUser | null;
   loading: boolean;
   isAuthenticated: boolean;
-  login: (identifier: string, password: string, role?: "customer" | "manager" | "admin") => Promise<AuthResponse>;
+  login: (identifier: string, password: string, role?: "customer" | "manager" | "admin" | "super_admin") => Promise<AuthResponse>;
   signup: (input: {
     firstName: string;
     lastName: string;
@@ -134,7 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [loading, pathname, router, user]);
 
-  const login = useCallback(async (identifier: string, password: string, role?: "customer" | "manager" | "admin"): Promise<AuthResponse> => {
+  const login = useCallback(async (identifier: string, password: string, role?: "customer" | "manager" | "admin" | "super_admin"): Promise<AuthResponse> => {
     try {
       const data = await api.post<{ user?: AuthUser }>('/api/auth/login', { identifier, password, role });
       const nextUser = data?.user ?? null;

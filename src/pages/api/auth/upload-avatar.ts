@@ -1,46 +1,80 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { validateMethod, jsonError, jsonSuccess, parseJsonBody } from '@/lib/api-utils';
+import { validateMethod, jsonError, jsonSuccess } from '@/lib/api-utils';
 import { randomUUID } from 'crypto';
-import fs from 'fs/promises';
-import path from 'path';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { getStorageProvider } from '@/lib/providers/factory';
+import { requireSession } from '@/lib/auth-utils';
+
+const MAX_AVATAR_SIZE = 5 * 1024 * 1024; // 5MB
+const ALLOWED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+
+async function readMultipartForm(req: NextApiRequest): Promise<{ field: string; file: Buffer; mimeType: string; filename: string } | null> {
+  const contentType = req.headers['content-type'] || '';
+  const match = contentType.match(/boundary=(?:(?:"([^"]+)"|([^;]+)))/i);
+  if (!match) return null;
+
+  const boundary = match[1] || match[2];
+  const chunks: Buffer[] = [];
+  for await (const chunk of req) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+
+  const raw = Buffer.concat(chunks);
+  const boundaryMarker = Buffer.from(`--${boundary}`);
+  const boundaryIndex = raw.indexOf(boundaryMarker);
+  if (boundaryIndex < 0) return null;
+
+  const headerStart = raw.indexOf(Buffer.from('Content-Disposition: form-data', 'utf8'), boundaryIndex);
+  if (headerStart < 0) return null;
+
+  const headerEnd = raw.indexOf(Buffer.from('\r\n\r\n'), headerStart);
+  if (headerEnd < 0) return null;
+
+  const headerText = raw.subarray(headerStart, headerEnd).toString('utf8');
+  const fileMatch = headerText.match(/name="([^"]+)"/i);
+  const filenameMatch = headerText.match(/filename="([^"]+)"/i);
+  const mimeTypeMatch = headerText.match(/Content-Type:\s*([^\r\n]+)/i);
+  if (!fileMatch || !filenameMatch || !mimeTypeMatch || fileMatch[1] !== 'avatar') return null;
+
+  const bodyStart = headerEnd + 4;
+  const tailMarker = Buffer.from(`\r\n--${boundary}`);
+  const bodyEnd = raw.indexOf(tailMarker, bodyStart);
+  const fileBytes = bodyEnd >= 0 ? raw.subarray(bodyStart, bodyEnd) : raw.subarray(bodyStart);
+
+  return {
+    field: fileMatch[1],
+    file: Buffer.from(fileBytes),
+    mimeType: mimeTypeMatch[1].trim(),
+    filename: filenameMatch[1].replace(/[\\/]+/g, '_'),
+  };
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const methodError = validateMethod(req, res, ['POST']);
   if (methodError) return methodError;
 
-  const body = parseJsonBody<{ imageDataUrl?: string }>(req);
-  if (!body || !body.imageDataUrl) return jsonError(res, 'invalid_request', 'Image data is required.', 400);
-
-  const match = body.imageDataUrl.match(/^data:(image\/(png|jpeg|jpg));base64,(.+)$/);
-  if (!match) return jsonError(res, 'invalid_request', 'Invalid image data URL.', 400);
-
-  const mime = match[1];
-  const ext = match[2] === 'png' ? 'png' : 'jpg';
-  const b64 = match[3];
-  const buffer = Buffer.from(b64, 'base64');
+  const auth = await requireSession(req, res);
+  if (!auth) return;
 
   try {
-    const useS3 = process.env.AVATAR_STORAGE === 's3';
-    if (useS3) {
-      const bucket = process.env.AVATAR_S3_BUCKET;
-      const region = process.env.AVATAR_S3_REGION;
-      if (!bucket || !region) return jsonError(res, 'invalid_request', 'S3 bucket/region not configured.', 500);
-      const client = new S3Client({ region });
-      const key = `avatars/${randomUUID()}.${ext}`;
-      await client.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: buffer, ContentType: mime }));
-      const publicUrl = `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
-      return jsonSuccess(res, { url: publicUrl }, 201);
+    const part = await readMultipartForm(req);
+    if (!part) return jsonError(res, 'invalid_request', 'Multipart avatar upload is required.', 400);
+
+    const { file, mimeType, filename } = part;
+    if (!ALLOWED_MIME_TYPES.includes(mimeType)) {
+      return jsonError(res, 'invalid_request', 'Only PNG, JPEG, and WEBP avatars are allowed.', 400);
     }
 
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
-    await fs.mkdir(uploadsDir, { recursive: true });
-    const filename = `${randomUUID()}.${ext}`;
-    const filePath = path.join(uploadsDir, filename);
-    await fs.writeFile(filePath, buffer);
-    const publicUrl = `/uploads/${filename}`;
+    if (file.length > MAX_AVATAR_SIZE) {
+      return jsonError(res, 'invalid_request', 'Avatar file size must not exceed 5MB.', 400);
+    }
+
+    const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const ext = safeName.includes('.') ? safeName.slice(safeName.lastIndexOf('.') + 1) : 'png';
+    const provider = getStorageProvider();
+    const storagePath = `avatars/${randomUUID()}.${ext}`;
+    const publicUrl = await provider.saveFile(storagePath, file, mimeType);
     return jsonSuccess(res, { url: publicUrl }, 201);
-  } catch (err) {
+  } catch {
     return jsonError(res, 'server_error', 'Unable to store avatar image.', 500);
   }
 }

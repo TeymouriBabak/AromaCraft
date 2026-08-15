@@ -1,6 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { devListUsers } from '@/lib/mock-users';
+import { devOnly } from '@/lib/middleware/devGuard';
+import { sendSuccess } from '@/lib/api-response';
+import { listMockUsers } from '@/lib/fixtures/mock-users';
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
-  return res.json({ users: devListUsers() });
-}
+export default devOnly(async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // List all seeded mock users (development only)
+  // These users are available for testing auth flows locally
+  return sendSuccess(res, { users: listMockUsers() }, 200);
+});

@@ -42,10 +42,7 @@ export default function OtpInput({ value, onChange, disabled = false, error = fa
     const pasted = (event.clipboardData.getData('text') ?? '').replace(/\D/g, '').slice(0, OTP_LENGTH);
     if (!pasted) return;
 
-    const nextValue = Array.from({ length: OTP_LENGTH }, (_, digitIndex) => {
-      const char = pasted[digitIndex] ?? '';
-      return digitIndex < value.length ? value[digitIndex] : char;
-    });
+    // prepare pasted digits (no extra intermediate variable needed)
 
     const digitsToApply = pasted.split('').slice(0, OTP_LENGTH);
     const merged = Array.from({ length: OTP_LENGTH }, (_, digitIndex) => digitsToApply[digitIndex] ?? '');

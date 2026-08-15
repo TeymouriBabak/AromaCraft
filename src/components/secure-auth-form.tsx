@@ -50,8 +50,7 @@ const loginRoleOptions = [
   { id: "admin", label: "Admin" },
 ] as const;
 
-type LoginMode = (typeof loginModeOptions)[number]["id"];
-type LoginRole = (typeof loginRoleOptions)[number]["id"];
+// LoginMode and LoginRole are defined in shared validation module; use those types there.
 
 type AuthView = "login" | "signup" | "recover-username" | "recover-password";
 
@@ -412,29 +411,27 @@ export default function SecureAuthForm({ onAuthenticated }: { onAuthenticated?: 
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result as string | null;
-      if (result) {
-        (async () => {
-          setAvatarPreview(result);
-          try {
-            const resp = await fetch('/api/auth/upload-avatar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imageDataUrl: result }) });
-            const json = await resp.json();
-            if (json?.ok && json.data && json.data.url) {
-              setAvatarPreview(json.data.url);
-              setSignupValue('avatarUrl', json.data.url);
-            } else {
-              // fallback to inline data URL
-              setSignupValue('avatarUrl', result);
-            }
-          } catch {
-            setSignupValue('avatarUrl', result);
-          }
-        })();
+
+    const previewUrl = URL.createObjectURL(file);
+    setAvatarPreview(previewUrl);
+
+    (async () => {
+      try {
+        const formData = new FormData();
+        formData.append('avatar', file);
+
+        const resp = await fetch('/api/auth/upload-avatar', { method: 'POST', body: formData });
+        const json = await resp.json();
+        if (json?.ok && json.data && json.data.url) {
+          setAvatarPreview(json.data.url);
+          setSignupValue('avatarUrl', json.data.url);
+        } else {
+          setSignupValue('avatarUrl', '');
+        }
+      } catch {
+        setSignupValue('avatarUrl', '');
       }
-    };
-                        reader.readAsDataURL(file);
+    })();
   };
 
   const renderMessage = () => {
@@ -837,28 +834,27 @@ export default function SecureAuthForm({ onAuthenticated }: { onAuthenticated?: 
                         setDragActive(false);
                         const file = event.dataTransfer.files?.[0];
                         if (!file) return;
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                          const result = reader.result as string | null;
-                          if (result) {
-                            (async () => {
-                              setAvatarPreview(result);
-                              try {
-                                const resp = await fetch('/api/auth/upload-avatar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imageDataUrl: result }) });
-                                const json = await resp.json();
-                                if (json?.ok && json.data && json.data.url) {
-                                  setAvatarPreview(json.data.url);
-                                  setSignupValue('avatarUrl', json.data.url);
-                                } else {
-                                  setSignupValue('avatarUrl', result);
-                                }
-                              } catch {
-                                setSignupValue('avatarUrl', result);
-                              }
-                            })();
+
+                        const previewUrl = URL.createObjectURL(file);
+                        setAvatarPreview(previewUrl);
+
+                        (async () => {
+                          try {
+                            const formData = new FormData();
+                            formData.append('avatar', file);
+
+                            const resp = await fetch('/api/auth/upload-avatar', { method: 'POST', body: formData });
+                            const json = await resp.json();
+                            if (json?.ok && json.data && json.data.url) {
+                              setAvatarPreview(json.data.url);
+                              setSignupValue('avatarUrl', json.data.url);
+                            } else {
+                              setSignupValue('avatarUrl', '');
+                            }
+                          } catch {
+                            setSignupValue('avatarUrl', '');
                           }
-                        };
-                        reader.readAsDataURL(file);
+                        })();
                       }}
                       className={`flex cursor-pointer items-center justify-center gap-3 rounded-[1.4rem] border border-dashed px-4 py-5 text-center transition-all duration-200 ${dragActive ? "border-[#c9854d] bg-[#f7ebdb] shadow-[0_10px_24px_-18px_rgba(43,29,23,0.35)]" : "border-[#d4a373]/30 bg-[#f9f6f0]/90 dark:bg-[#23110c]"}`}
                     >

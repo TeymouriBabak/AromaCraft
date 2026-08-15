@@ -3,6 +3,7 @@ import { requireSession } from '@/lib/auth-utils';
 import { jsonError, jsonSuccess, parseJsonBody, validateMethod } from '@/lib/api-utils';
 import { prisma } from '@/lib/prisma';
 import { buildCommentTitle, normalizeCommentDestination } from '@/lib/review-utils';
+import { createReviewSchema } from '@/lib/validators/review';
 
 const defaultReviews = [
   {
@@ -48,8 +49,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return jsonSuccess(res, {
         reviews: mapped.length ? mapped : defaultReviews,
       }, 200);
-    } catch (error) {
-      return jsonError(res, 'reviews_error', 'Unable to load reviews.', 500, error instanceof Error ? error.message : undefined);
+    } catch {
+      return jsonError(res, 'reviews_error', 'Unable to load reviews.', 500);
     }
   }
 
@@ -62,18 +63,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return jsonError(res, 'invalid_request', 'Review payload is required.', 400);
     }
 
-    const destination = normalizeCommentDestination(body.destination);
-    const rawTitle = body.title?.trim() || buildCommentTitle(destination);
-    const content = body.content?.trim();
-    const rating = Number(body.rating ?? 5);
-
-    if (!content || content.length < 12) {
-      return jsonError(res, 'invalid_request', 'Please share a few more details about your experience.', 400);
+    const parsed = createReviewSchema.safeParse(body);
+    if (!parsed.success) {
+      return jsonError(res, 'invalid_request', 'Invalid review payload.', 400, parsed.error.flatten());
     }
 
-    if (!Number.isFinite(rating) || rating < 1 || rating > 5) {
-      return jsonError(res, 'invalid_request', 'Rating must be between 1 and 5.', 400);
-    }
+    const reviewInput = parsed.data;
+    const destination = normalizeCommentDestination(reviewInput.destination);
+    const rawTitle = reviewInput.title.trim() || buildCommentTitle(destination);
+    const content = reviewInput.content.trim();
+    const rating = reviewInput.rating;
 
     try {
       const review = await prisma.review.create({
@@ -99,8 +98,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           createdAt: review.createdAt.toISOString(),
         },
       }, 201);
-    } catch (error) {
-      return jsonError(res, 'reviews_error', 'Unable to save your review.', 500, error instanceof Error ? error.message : undefined);
+    } catch {
+      return jsonError(res, 'reviews_error', 'Unable to save your review.', 500);
     }
   }
 

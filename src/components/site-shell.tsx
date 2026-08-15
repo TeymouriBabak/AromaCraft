@@ -85,7 +85,11 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
   const { items, itemCount, subtotal, total, shipping, isOpen, closeCart, openCart, updateQuantity, hasHydrated: cartHydrated } = useCart();
 
   useEffect(() => {
-    setMounted(true);
+    // Schedule mount flag update after paint to avoid synchronous setState in effect
+    const raf = typeof window !== 'undefined' ? window.requestAnimationFrame(() => setMounted(true)) : null;
+    return () => {
+      if (raf) window.cancelAnimationFrame(raf as number);
+    };
   }, []);
 
   useEffect(() => {

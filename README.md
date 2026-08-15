@@ -4,40 +4,60 @@ AromaCraft is a fully local, offline-capable premium coffee storefront built wit
 
 ## Local development
 
-1. Copy the example environment file:
+1. Copy the example environment file if you do not already have a local `.env`:
 
 ```bash
 cp .env.example .env
 ```
 
-2. Start the local database:
+> `.env` is local-only and must never be committed or shared.
 
-- With Docker:
-  ```bash
-  npm run db:docker
-  ```
-- Or with local MariaDB / WSL:
-  ```bash
-  bash scripts/setup-mariadb-dev.sh
-  ```
-
-3. Generate Prisma artifacts, sync the schema, and seed demo data:
+2. Start the stack with Docker:
 
 ```bash
-npm run db:init
+docker compose up -d
 ```
 
-4. Start the app:
+3. Optional non-destructive checks:
 
 ```bash
-npm run dev
+docker compose ps
+docker compose exec app npx prisma migrate status
 ```
 
-5. Open the site in your browser:
+4. Open the site in your browser:
 
 ```text
-http://localhost:3000
+http://localhost:3001
 ```
+
+5. Stop the stack when finished:
+
+```bash
+docker compose stop
+```
+
+## Runtime and connectivity
+
+- App URL: http://localhost:3001
+- Host database connection: 127.0.0.1:3307
+- Internal Docker database connection: mariadb:3306
+- Mailpit UI: http://localhost:8025
+- Mock SMS endpoint: http://localhost:3010/sms
+
+## Database and Prisma
+
+- Prisma connects from the app container using `mariadb:3306`.
+- The host machine uses `127.0.0.1:3307` for direct tooling only.
+- Use non-destructive verification commands such as:
+
+```bash
+docker compose exec app npx prisma migrate status
+docker compose logs mariadb --tail=50
+docker compose logs app --tail=50
+```
+
+Do not run destructive reset commands such as `docker compose down -v` or `npx prisma migrate reset` unless you explicitly intend to rebuild the database from scratch.
 
 ## Offline runtime and local assets
 
