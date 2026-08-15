@@ -1,6 +1,10 @@
 import { SignJWT, jwtVerify } from 'jose';
 
-export const AUTH_SECRET = process.env.AUTH_SECRET || 'development-auth-secret-change-me';
+const rawAuthSecret = process.env.AUTH_SECRET;
+if (!rawAuthSecret) {
+  throw new Error('AUTH_SECRET environment variable is required and must not be empty');
+}
+export const AUTH_SECRET = rawAuthSecret;
 
 export type RouteHintPayload = {
   userId: string;
