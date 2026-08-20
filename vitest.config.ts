@@ -38,7 +38,7 @@ module.exports = defineConfig({
   test: {
     environment: 'node',
     globals: true,
-    setupFiles: ['dotenv/config'],
+    setupFiles: ['dotenv/config', 'tests/setup/console-guard.ts'],
     globalSetup: 'tests/setup/global-setup.ts',
     // If Prisma still causes interop issues, run tests in a single worker
     threads: false,

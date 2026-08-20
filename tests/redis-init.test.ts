@@ -1,7 +1,8 @@
 import 'dotenv/config';
 import 'tsconfig-paths/register';
 
-import { test, beforeAll, beforeEach, afterEach } from 'vitest';
+import { test } from 'vitest';
+import { allowRedisFallback, getCapturedConsoleMessages } from './setup/console-guard';
 import assert from 'node:assert/strict';
 
 import * as redisModule from '../src/lib/redis';
@@ -29,46 +30,7 @@ async function resetState() {
   if (typeof maybe.resetRedisTestState === 'function') maybe.resetRedisTestState();
 }
 
-// Keep console logging enabled so tests surface Redis fallback warnings
-// if the Redis client falls back; tests should fail if fallback occurs.
-
-// Suite-wide console capture: collect warn/error messages and allow
-// specific tests to opt into expecting fallback messages. Tests must
-// explicitly mark `allowFallback = true` when they intentionally
-// simulate Redis unavailability.
-let captured: string[] = [];
-let allowFallback = false;
-const FALLBACK_PATTERNS = [/\[redis\].*continuing without Redis/i, /redis unavailable/i, /connection timeout/i, /rate-limit\] Redis unavailable/i];
-const origWarn = console.warn;
-const origError = console.error;
-
-beforeAll(() => {
-  console.warn = (...args: unknown[]) => {
-    try { captured.push(String(args.join(' '))); } catch {}
-    return (origWarn as (...a: unknown[]) => void)(...args as unknown as unknown[]);
-  };
-  console.error = (...args: unknown[]) => {
-    try { captured.push(String(args.join(' '))); } catch {}
-    return (origError as (...a: unknown[]) => void)(...args as unknown as unknown[]);
-  };
-});
-
-beforeEach(() => {
-  captured = [];
-  allowFallback = false;
-});
-
-afterEach(() => {
-  // If the test did not opt-in to expect fallback messages, fail
-  // if any captured messages match known fallback patterns.
-  const hits = captured.filter(msg => FALLBACK_PATTERNS.some(rx => rx.test(msg)));
-  if (!allowFallback && hits.length > 0) {
-    // restore originals before throwing to avoid affecting other suites
-    console.warn = origWarn;
-    console.error = origError;
-    throw new Error(`Unexpected Redis fallback logs detected: ${hits.join(' | ')}`);
-  }
-});
+// Shared console guard lives in tests/setup/console-guard.ts
 
 test('checkRateLimit initializes Redis lazily on first call', async () => {
   await resetState();
@@ -125,10 +87,8 @@ test('concurrent initializations share a single attempt', async () => {
 test('failed connection remains fail-closed and allows retry later', async () => {
   await resetState();
   // This test intentionally simulates a transient connect failure and
-  // therefore is allowed to emit Redis fallback logs. Mark it so the
-  // suite-wide guard does not fail it, and assert the expected messages
-  // are present.
-  allowFallback = true;
+  // therefore is allowed to emit Redis fallback logs.
+  allowRedisFallback();
 
   let attempts = 0;
   const factory = () => {
@@ -158,7 +118,7 @@ test('failed connection remains fail-closed and allows retry later', async () =>
   assert.equal(attempts >= 2, true);
 
   // Assert that expected fallback messages were emitted
-  const hits = captured.filter(msg => FALLBACK_PATTERNS.some(rx => rx.test(msg)));
+  const hits = getCapturedConsoleMessages().filter(s => /continuing without Redis/i.test(s) || /Redis unavailable/i.test(s) || /connection timeout/i.test(s) || /rate-limit\] Redis unavailable/i.test(s));
   if (hits.length === 0) {
     throw new Error('Expected Redis fallback logs during simulated failure, but none were captured');
   }
