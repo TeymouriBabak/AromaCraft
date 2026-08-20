@@ -23,30 +23,30 @@ services:
       timeout: 3s
       retries: 15
 
-    mailpit:
-      image: axllent/mailpit:latest
-      ports:
-        - "127.0.0.1:1025:1025"
-        - "127.0.0.1:8025:8025"
-      restart: unless-stopped
-      healthcheck:
-        test: ["CMD", "wget", "-qO-", "http://localhost:8025/api/v1/info"]
-        interval: 10s
-        timeout: 5s
-        retries: 5
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8025/api/v1/info"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-    sms-mock:
-      build:
-        context: ./services/sms-mock
-        dockerfile: Dockerfile
-      ports:
-        - "127.0.0.1:3001:3001"
-      restart: unless-stopped
-      healthcheck:
-        test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
-        interval: 10s
-        timeout: 5s
-        retries: 5
+  sms-mock:
+    build:
+      context: ./services/sms-mock
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:3001:3001"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   mariadb_data:
