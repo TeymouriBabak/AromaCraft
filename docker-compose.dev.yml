@@ -5,7 +5,7 @@ services:
     ports:
       - "127.0.0.1:6399:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "-h", "127.0.0.1", "-p", "6379", "ping"]
+      test: ["CMD", "redis-cli", "-h", "redis", "-p", "6379", "ping"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -18,7 +18,7 @@ services:
     ports:
       - "127.0.0.1:3307:3306"
     healthcheck:
-      test: ["CMD", "bash", "-c", "mysqladmin ping -h 127.0.0.1 -P 3306 -uroot -proot_dev_password" ]
+      test: ["CMD", "bash", "-c", "mysqladmin ping -h mariadb -P 3306 -uroot -proot_dev_password" ]
       interval: 5s
       timeout: 3s
       retries: 15
@@ -43,10 +43,44 @@ services:
       - "127.0.0.1:3001:3001"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
+      test: ["CMD", "wget", "-qO-", "http://sms-mock:3001/health"]
       interval: 10s
       timeout: 5s
       retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      DATABASE_URL: "${DATABASE_URL:?DATABASE_URL must be set in .env}"
+      REDIS_URL: "redis://redis:6379"
+      DOCKER_ENVIRONMENT: "true"
+      SMS_MOCK_URL: "http://sms-mock:3001"
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      USE_MOCKS: ${USE_MOCKS}
+    volumes:
+      - ./:/usr/src/app:cached
+      - /usr/src/app/node_modules
+      - /usr/src/app/.next
+      - /usr/src/app/src/generated/prisma
+      - storage-vol:/usr/src/app/public/uploads
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mailpit:
+        condition: service_healthy
+      sms-mock:
+        condition: service_healthy
 
 volumes:
   mariadb_data:
