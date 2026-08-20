@@ -67,3 +67,7 @@ next-env.d.ts
 
 # Temporary QA output
 /qc
+
+# Ignore vitest runner output and rebase editor artifacts
+vitest_output.log
+.git-rebase-editor.sh
