@@ -27,16 +27,20 @@ function waitForPort(host: string, port: number, timeoutMs = 30000): Promise<voi
 }
 
 export default async function globalSetup() {
+  // Ensure tests use the host-mapped services from docker-compose.dev.yml
+  process.env.REDIS_URL = process.env.REDIS_URL ?? 'redis://127.0.0.1:6399';
+  process.env.DATABASE_URL = process.env.DATABASE_URL ?? 'mysql://root:root_dev_password@127.0.0.1:3307/aromacraft';
+
   try {
     await waitForPort('127.0.0.1', 6399, 30000);
-  } catch (err) {
+  } catch {
     throw new Error('Redis not reachable on 127.0.0.1:6399 — run npm run deps:up');
   }
 
   try {
     // MariaDB port mapping: tests expect 3307 mapped to container 3306
     await waitForPort('127.0.0.1', 3307, 30000);
-  } catch (err) {
+  } catch {
     throw new Error('MariaDB not reachable on 127.0.0.1:3307 — run npm run deps:up');
   }
 
