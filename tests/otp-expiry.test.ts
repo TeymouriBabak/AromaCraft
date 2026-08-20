@@ -1,5 +1,9 @@
-import test from 'node:test';
+import 'dotenv/config';
+import 'tsconfig-paths/register';
+
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
+import type { NextApiRequest, NextApiResponse } from 'next';
 import { randomUUID } from 'crypto';
 import { createDbUser } from '../src/lib/db-auth';
 import { prisma } from '../src/lib/prisma';
@@ -14,7 +18,7 @@ function makeMockRes() {
     json(obj: unknown) { body = obj; return { statusCode, body }; },
     setHeader() { return this; },
     _get() { return { statusCode, body }; },
-  } as unknown as { status(code: number): any; json(obj: unknown): { statusCode: number; body: unknown }; _get(): { statusCode: number; body: unknown } };
+  } as unknown as { status(code: number): unknown; json(obj: unknown): { statusCode: number; body: unknown }; _get(): { statusCode: number; body: unknown } };
 }
 
 test('expired OTP is rejected', async () => {
@@ -49,7 +53,7 @@ test('expired OTP is rejected', async () => {
   });
 
   const res = makeMockRes();
-  await (handleVerifyAccount as any)({ method: 'POST', body: { email, code } } as unknown, res);
+  await handleVerifyAccount({ method: 'POST', body: { email, code } } as unknown as NextApiRequest, res as unknown as NextApiResponse);
   const out = res._get();
   assert.equal(out.statusCode, 401);
 });

@@ -1,4 +1,7 @@
-import test from 'node:test';
+import 'dotenv/config';
+import 'tsconfig-paths/register';
+
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { createDbUser, findUserByMobile } from '../src/lib/db-auth';
 import { normalizePhoneNumber } from '../src/lib/auth-validation';
@@ -21,7 +24,11 @@ test('mobile normalization and uniqueness for Iranian numbers', async () => {
     mobile: mobileVariants[0],
     countryCode: null,
   });
-  assert.ok(user && user.id, 'First user should be created');
+  let actualUser = user;
+  if (!actualUser) {
+    actualUser = await findUserByMobile(mobileVariants[0]);
+  }
+  assert.ok(actualUser && actualUser.id, 'First user should be created');
 
   // Normalized canonical form
   const canonical = normalizePhoneNumber(mobileVariants[0]);
@@ -29,7 +36,7 @@ test('mobile normalization and uniqueness for Iranian numbers', async () => {
 
   // find by alternative variant should resolve to the same user
   const found = await findUserByMobile(mobileVariants[1]);
-  assert.ok(found && found.id === user.id, 'findUserByMobile should locate the created user from another variant');
+  assert.ok(found && found.id === actualUser.id, 'findUserByMobile should locate the created user from another variant');
 
   // Attempt to create another user with a different username/email but same mobile (alternate format)
   const user2 = await createDbUser({

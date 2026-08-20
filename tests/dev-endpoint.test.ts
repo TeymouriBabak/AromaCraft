@@ -1,4 +1,7 @@
-import test from 'node:test';
+import 'dotenv/config';
+import 'tsconfig-paths/register';
+
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 
 import handler from '../src/pages/api/dev/latest-verification-code';

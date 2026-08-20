@@ -1,6 +1,6 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider      = "prisma-client"
+  output        = "../src/generated/prisma"
   binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
@@ -9,10 +9,162 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id                 String              @id @default(cuid())
+  username           String              @unique @db.VarChar(120)
+  name               String?
+  firstName          String?             @db.VarChar(120)
+  lastName           String?             @db.VarChar(120)
+  gender             String?             @db.VarChar(80)
+  mobile             String?             @unique @db.VarChar(40)
+  countryCode        String?             @db.VarChar(10)
+  email              String              @unique
+  passwordHash       String              @db.VarChar(255)
+  avatarUrl          String?             @db.VarChar(255)
+  emailVerified      DateTime?
+  role               UserRole            @default(CUSTOMER)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  bannedAt           DateTime?
+  bannedBy           String?
+  isBanned           Boolean             @default(false)
+  orders             Order[]
+  reviews            Review[]
+  sessions           Session[]
+  activities         UserActivity[]
+  verificationTokens VerificationToken[]
+
+  @@index([email])
+  @@index([username])
+}
+
+model Session {
+  id              String        @id @default(cuid())
+  tokenHash       String        @unique @db.VarChar(255)
+  userId          String
+  status          SessionStatus @default(ACTIVE)
+  isAuthenticated Boolean       @default(false)
+  expiresAt       DateTime
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Product {
+  id          String      @id @default(cuid())
+  slug        String      @unique @db.VarChar(120)
+  name        String      @db.VarChar(160)
+  description String?     @db.Text
+  price       Decimal     @db.Decimal(12, 0)
+  inventory   Int         @default(0)
+  imageUrl    String?     @db.VarChar(255)
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  orderItems  OrderItem[]
+
+  @@index([slug])
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  userId      String?
+  status      OrderStatus @default(PENDING)
+  subtotal    Decimal     @db.Decimal(12, 0)
+  shippingFee Decimal     @db.Decimal(12, 0)
+  total       Decimal     @db.Decimal(12, 0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  user        User?       @relation(fields: [userId], references: [id])
+  items       OrderItem[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model UserActivity {
+  id         String   @id @default(cuid())
+  userId     String
+  sessionId  String?
+  action     String   @db.VarChar(160)
+  metadata   Json?
+  durationMs Int?     @default(0)
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model Review {
+  id        String     @id @default(cuid())
+  userId    String
+  productId String?
+  rating    Int        @default(5)
+  title     String     @db.VarChar(160)
+  content   String     @db.Text
+  type      ReviewType @default(HOME)
+  createdAt DateTime   @default(now())
+  hiddenAt  DateTime?
+  hiddenBy  String?
+  isHidden  Boolean    @default(false)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([productId])
+}
+
+model VerificationToken {
+  id           String                @id @default(cuid())
+  userId       String
+  type         VerificationTokenType @default(EMAIL_VERIFICATION)
+  token        String                @unique @db.VarChar(255)
+  otpHash      String?               @db.VarChar(255)
+  verified     Boolean               @default(false)
+  usedCount    Int                   @default(0)
+  attemptCount Int                   @default(0)
+  createdAt    DateTime              @default(now())
+  expiresAt    DateTime
+  usedAt       DateTime?
+  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@index([expiresAt])
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  productId String
+  quantity  Int      @default(1)
+  unitPrice Decimal  @db.Decimal(12, 0)
+  createdAt DateTime @default(now())
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model BannedIdentity {
+  id        String   @id @default(cuid())
+  type      String   @db.VarChar(32)
+  value     String   @db.VarChar(255)
+  createdBy String?
+  createdAt DateTime @default(now())
+
+  @@unique([type, value])
+  @@index([type])
+}
+
 enum UserRole {
   CUSTOMER
   ADMIN
-  SUPER_ADMIN
+  MANAGER
 }
 
 enum SessionStatus {
@@ -29,112 +181,6 @@ enum OrderStatus {
   CANCELLED
 }
 
-model User {
-  id             String          @id @default(cuid())
-  username       String          @unique @db.VarChar(120)
-  name           String?
-  firstName      String?         @db.VarChar(120)
-  lastName       String?         @db.VarChar(120)
-  gender         String?         @db.VarChar(80)
-  mobile         String?         @unique @db.VarChar(40)
-  countryCode    String?         @db.VarChar(10)
-  email          String          @unique
-  passwordHash   String          @db.VarChar(255)
-  avatarUrl      String?         @db.VarChar(255)
-  emailVerified  DateTime?
-  role           UserRole        @default(CUSTOMER)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  sessions           Session[]
-  orders             Order[]
-  activities         UserActivity[]
-  reviews            Review[]
-  verificationTokens VerificationToken[]
-
-  @@index([email])
-  @@index([username])
-}
-
-model Session {
-  id        String        @id @default(cuid())
-  tokenHash String        @unique @db.VarChar(255)
-  userId    String
-  status    SessionStatus @default(ACTIVE)
-  isAuthenticated Boolean   @default(false)
-  expiresAt DateTime
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([expiresAt])
-}
-
-model Product {
-  id          String    @id @default(cuid())
-  slug        String    @unique @db.VarChar(120)
-  name        String    @db.VarChar(160)
-  description String?   @db.Text
-  price       Decimal   @db.Decimal(12, 0)
-  inventory   Int       @default(0)
-  imageUrl    String?   @db.VarChar(255)
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  orderItems  OrderItem[]
-
-  @@index([slug])
-}
-
-model Order {
-  id          String      @id @default(cuid())
-  userId      String?
-  status      OrderStatus @default(PENDING)
-  subtotal    Decimal     @db.Decimal(12, 0)
-  shippingFee Decimal     @db.Decimal(12, 0)
-  total       Decimal     @db.Decimal(12, 0)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  user        User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
-  items       OrderItem[]
-
-  @@index([userId])
-  @@index([status])
-}
-
-model UserActivity {
-  id           String    @id @default(cuid())
-  userId       String
-  sessionId    String?
-  action       String    @db.VarChar(160)
-  metadata     Json?
-  durationMs   Int?      @default(0)
-  createdAt    DateTime  @default(now())
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([createdAt])
-}
-
-model Review {
-  id          String    @id @default(cuid())
-  userId      String
-  productId   String?
-  rating      Int       @default(5)
-  title       String    @db.VarChar(160)
-  content     String    @db.Text
-  type        ReviewType @default(HOME)
-  createdAt   DateTime  @default(now())
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // OCL Rules:
-  // - rating must be between 1 and 5 (enforced at application level)
-  // - authorID (userId) must be valid and non-null
-  // - author must match session.user (enforced at application level)
-  @@index([userId])
-  @@index([productId])
-}
-
 enum ReviewType {
   HOME
   PRODUCT
@@ -144,37 +190,4 @@ enum VerificationTokenType {
   EMAIL_VERIFICATION
   LOGIN_OTP
   PURCHASE_OTP
-}
-
-model VerificationToken {
-  id        String                 @id @default(cuid())
-  userId    String
-  type      VerificationTokenType @default(EMAIL_VERIFICATION)
-  token     String                 @unique @db.VarChar(255)
-  otpHash   String?                @db.VarChar(255)
-  verified  Boolean                @default(false)
-  usedCount Int                    @default(0)
-  attemptCount Int                 @default(0)
-  createdAt DateTime               @default(now())
-  expiresAt DateTime
-  usedAt    DateTime?
-  user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([type])
-  @@index([expiresAt])
-}
-
-model OrderItem {
-  id        String   @id @default(cuid())
-  orderId   String
-  productId String
-  quantity  Int      @default(1)
-  unitPrice Decimal  @db.Decimal(12, 0)
-  createdAt DateTime @default(now())
-  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
-
-  @@index([orderId])
-  @@index([productId])
 }

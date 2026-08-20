@@ -1,21 +1,27 @@
-import test from 'node:test';
+import 'dotenv/config';
+import 'tsconfig-paths/register';
+
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
+import type { NextApiResponse } from 'next';
 import { setSessionCookie } from '../src/lib/auth-utils';
 
 function makeMockRes() {
-  let headers: Record<string, string | string[]> = {};
-  return {
+  const headers: Record<string, string | string[]> = {};
+  const res = {
     setHeader(name: string, value: string | string[]) { headers[name] = value; },
     _get() { return headers; },
-  } as unknown as { setHeader(name: string, value: string | string[]): void; _get(): Record<string, string | string[]> };
+  };
+  return res as unknown as NextApiResponse & { _get(): Record<string, string | string[]> };
 }
 
 test('session cookie includes Secure in production and HttpOnly always', async () => {
   const prev = process.env.NODE_ENV;
-  Object.defineProperty(process.env, 'NODE_ENV', { value: 'production', configurable: true, writable: true });
+  const env = process.env as { [k: string]: string | undefined };
+  env.NODE_ENV = 'production';
   try {
     const res = makeMockRes();
-    setSessionCookie(res as any, 'testtoken', 3600, { id: 'u_test', role: 'customer' });
+    await setSessionCookie(res, 'testtoken', 3600, { id: 'u_test', role: 'customer' });
     const headers = res._get();
     const set = headers['Set-Cookie'];
     const cookies = Array.isArray(set) ? set : [String(set)];
@@ -27,6 +33,6 @@ test('session cookie includes Secure in production and HttpOnly always', async (
     assert.ok(sc.includes('SameSite=Lax'));
     assert.ok(sc.includes('Path=/'));
   } finally {
-    if (prev === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = prev;
+    if (prev === undefined) delete env.NODE_ENV; else env.NODE_ENV = prev;
   }
 });

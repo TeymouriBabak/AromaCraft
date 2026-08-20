@@ -18,7 +18,7 @@ import {
   type MockUser,
 } from './fixtures/mock-users';
 
-export type Role = 'customer' | 'manager' | 'admin' | 'super_admin';
+export type Role = 'customer' | 'admin' | 'manager';
 
 export type User = MockUser;
 

@@ -38,6 +38,7 @@ services:
       target: builder
     container_name: aromacraft-test
     image: aromacraft_test:local
+    profiles: ["test"]
     env_file:
       - .env
     environment:

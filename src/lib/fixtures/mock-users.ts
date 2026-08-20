@@ -15,7 +15,7 @@ export type MockUser = {
   username: string;
   email: string;
   passwordHash: string; // FOR DEV ONLY - Never expose in production
-  role: 'customer' | 'manager' | 'admin' | 'super_admin';
+  role: 'customer' | 'admin' | 'manager';
   name?: string;
   firstName?: string;
   lastName?: string;
@@ -30,44 +30,60 @@ export type MockUser = {
  * WARNING: These are PLAINTEXT passwords for demo purposes only.
  * In production, all passwords are hashed via bcryptjs.
  */
-export const MOCK_USERS: MockUser[] = [
-  {
-    id: 'u_customer',
-    username: 'Tbabak',
-    email: 'tbabak@example.com',
-    passwordHash: 'Teymouribabak78#', // DEV ONLY
-    role: 'customer',
-    name: 'Babak Teymouri',
-    firstName: 'Babak',
-    lastName: 'Teymouri',
-    mobile: '+1234567890',
-    countryCode: '+1',
-  },
-  {
-    id: 'u_admin',
-    username: 'Admin_Aroma',
-    email: 'manager@aromacraft.test',
-    passwordHash: 'AromaAdmin2026#', // DEV ONLY
-    role: 'admin',
-    name: 'Aroma Sales Manager',
-    firstName: 'Aroma',
-    lastName: 'Manager',
-    mobile: '+1111111111',
-    countryCode: '+1',
-  },
-  {
-    id: 'u_super_admin',
-    username: 'Super_Aroma',
-    email: 'super@aromacraft.test',
-    passwordHash: 'SuperAroma2026#', // DEV ONLY
-    role: 'super_admin',
-    name: 'System Super Admin',
-    firstName: 'System',
-    lastName: 'Admin',
-    mobile: '+1222222222',
-    countryCode: '+1',
-  },
-];
+const devPassword = process.env.DEV_MOCK_PASSWORD;
+
+export const MOCK_USERS: MockUser[] = devPassword
+  ? [
+      {
+        id: 'u_customer',
+        username: 'Tbabak',
+        email: 'tbabak@example.com',
+        passwordHash: devPassword,
+        role: 'customer',
+        name: 'Babak Teymouri',
+        firstName: 'Babak',
+        lastName: 'Teymouri',
+        mobile: '+1234567890',
+        countryCode: '+1',
+      },
+      {
+        id: 'u_admin',
+        username: 'Admin_Aroma',
+        email: 'manager@aromacraft.test',
+        passwordHash: devPassword,
+        role: 'admin',
+        name: 'Aroma Sales Manager',
+        firstName: 'Aroma',
+        lastName: 'Manager',
+        mobile: '+1111111111',
+        countryCode: '+1',
+        },
+        {
+          id: 'u_manager',
+          username: 'Manager_Aroma',
+          email: 'manager@aromacraft.test',
+          passwordHash: devPassword,
+          role: 'manager',
+          name: 'System Manager',
+          firstName: 'System',
+          lastName: 'Manager',
+          mobile: '+1222222222',
+          countryCode: '+1',
+      },
+      {
+        id: 'u_manager_legacy',
+        username: 'Manager_Aroma_legacy',
+        email: 'super@aromacraft.test',
+        passwordHash: devPassword,
+        role: 'manager',
+        name: 'System Manager (legacy)',
+        firstName: 'System',
+        lastName: 'Manager',
+        mobile: '+1222222222',
+        countryCode: '+1',
+      },
+    ]
+  : [];
 
 /**
  * Mock reviews for development/home page seeding

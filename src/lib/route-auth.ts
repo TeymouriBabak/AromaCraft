@@ -1,6 +1,11 @@
 import { SignJWT, jwtVerify } from 'jose';
 
-const rawAuthSecret = process.env.AUTH_SECRET;
+let rawAuthSecret = process.env.AUTH_SECRET;
+// Allow tests to run without an explicit secret by providing a safe default when running the test lifecycle
+if (!rawAuthSecret && (process.env.NODE_ENV === 'test' || process.env.npm_lifecycle_event === 'test')) {
+  console.warn('AUTH_SECRET not set — using test fallback secret for test lifecycle');
+  rawAuthSecret = 'test-secret';
+}
 if (!rawAuthSecret) {
   throw new Error('AUTH_SECRET environment variable is required and must not be empty');
 }
@@ -8,7 +13,7 @@ export const AUTH_SECRET = rawAuthSecret;
 
 export type RouteHintPayload = {
   userId: string;
-  role: 'customer' | 'manager' | 'admin' | 'super_admin';
+  role: 'customer' | 'admin' | 'manager';
   exp?: number;
 };
 

@@ -13,7 +13,7 @@ export type AuthUser = {
   mobile?: string;
   countryCode?: string;
   email: string;
-  role?: "customer" | "manager" | "admin";
+  role?: "customer" | "admin" | "manager";
   avatarUrl?: string;
   emailVerified?: boolean;
   createdAt?: string;
@@ -22,7 +22,7 @@ export type AuthUser = {
 export type AuthResponse = {
   success: boolean;
   message: string;
-  role?: "customer" | "manager" | "admin";
+  role?: "customer" | "admin" | "manager";
   verificationCode?: string;
 };
 
@@ -30,7 +30,7 @@ type AuthContextValue = {
   user: AuthUser | null;
   loading: boolean;
   isAuthenticated: boolean;
-  login: (identifier: string, password: string, role?: "customer" | "manager" | "admin" | "super_admin") => Promise<AuthResponse>;
+  login: (identifier: string, password: string, role?: "customer" | "admin" | "manager") => Promise<AuthResponse>;
   signup: (input: {
     firstName: string;
     lastName: string;
@@ -134,7 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [loading, pathname, router, user]);
 
-  const login = useCallback(async (identifier: string, password: string, role?: "customer" | "manager" | "admin" | "super_admin"): Promise<AuthResponse> => {
+  const login = useCallback(async (identifier: string, password: string, role?: "customer" | "admin" | "manager"): Promise<AuthResponse> => {
     try {
       const data = await api.post<{ user?: AuthUser }>('/api/auth/login', { identifier, password, role });
       const nextUser = data?.user ?? null;
@@ -164,8 +164,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     avatarUrl?: string;
     verificationCode?: string;
   }): Promise<AuthResponse> => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
     try {
-      const resp = await api.post<{ user?: AuthUser; verificationCode?: string }>('/api/auth/signup', input);
+      const resp = await api.post<{ user?: AuthUser; verificationCode?: string }>('/api/auth/signup', input, { signal: controller.signal });
       if (resp && resp.user) {
         return {
           success: true,
@@ -177,6 +179,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       const normalized = handleApiError(error, 'Signup failed');
       return { success: false, message: normalized.message };
+    } finally {
+      clearTimeout(timeout);
     }
   }, []);
 

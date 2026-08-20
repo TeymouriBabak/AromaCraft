@@ -2,7 +2,8 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { validateMethod, jsonError, jsonSuccess } from '@/lib/api-utils';
 import { randomUUID } from 'crypto';
 import { getStorageProvider } from '@/lib/providers/factory';
-import { requireSession } from '@/lib/auth-utils';
+import { parseSession } from '@/lib/auth-utils';
+import { checkRateLimit, RATE_LIMIT_CONFIG } from '@/lib/redis';
 
 const MAX_AVATAR_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
@@ -52,8 +53,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const methodError = validateMethod(req, res, ['POST']);
   if (methodError) return methodError;
 
-  const auth = await requireSession(req, res);
-  if (!auth) return;
+  // Allow anonymous uploads for signup flows, but enforce rate limiting to prevent abuse.
+  // Use parseSession (non-mutating) to detect if a session exists without sending a 401 response.
+  const session = await parseSession(req).catch(() => null);
+  if (!session) {
+    try {
+      const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+      const key = `upload-avatar:${String(ip)}`;
+      const allowed = await checkRateLimit(key, RATE_LIMIT_CONFIG.SIGNUP.limit * 10, RATE_LIMIT_CONFIG.SIGNUP.windowSeconds).catch(() => true);
+      if (!allowed) return jsonError(res, 'rate_limited', 'Too many avatar uploads. Try later.', 429);
+    } catch {
+      // If rate-limiter is unavailable, allow in dev but return 503 in production.
+      if (process.env.NODE_ENV === 'production') {
+        return jsonError(res, 'rate_limiter_unavailable', 'Rate limiting unavailable. Try again later.', 503);
+      }
+      console.warn('[upload-avatar] Redis check unavailable, continuing in dev mode');
+    }
+  }
 
   try {
     const part = await readMultipartForm(req);
@@ -78,3 +94,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return jsonError(res, 'server_error', 'Unable to store avatar image.', 500);
   }
 }
+
+
+export const config = {
+  api: { bodyParser: false },
+};

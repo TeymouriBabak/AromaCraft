@@ -1,0 +1,141 @@
+
+[1m[46m RUN [49m[22m [36mv3.2.7 [39m[90mC:/Users/Admin/Desktop/New folder (3)/aromacraft[39m
+
+Γ£ö customers can only access their own orders (1.6158ms)
+Γ£ö admins can access other users orders (5.9605ms)
+Γ£ö inactive or expired sessions are rejected (0.3451ms)
+Γ£ö order totals are computed from server-side product prices (0.2792ms)
+Γ£ö unknown products are rejected during order calculation (0.5968ms)
+[90mstdout[2m | tests/redis-init.test.ts
+[22m[39m[redis] Connected
+
+[90mstdout[2m | tests/redis-init.test.ts
+[22m[39m[redis] Disconnected
+
+Γ£ö checkRateLimit initializes Redis lazily on first call (10.0885ms)
+[90mstdout[2m | tests/phone-validation.test.ts
+[22m[39m+14155552671 -> valid=true
++14155552671 -> normalized=+14155552671
++447911123456 -> valid=true
++447911123456 -> normalized=+447911123456
+09123456789 -> valid=true
+09123456789 -> normalized=+989123456789
++989123456789 -> valid=true
++989123456789 -> normalized=+989123456789
+12345 -> valid=false
++1 -> valid=false
+phone-validation tests passed
+
+Γ£ö signup form is disabled when required fields are empty (1.6253ms)
+Γ£ö signup form is enabled when all valid required fields are filled (8.3477ms)
+Γ£ö invalid phone numbers are rejected with a field-level validation error (1.3171ms)
+Γ£ö valid phone numbers use the same client and server normalization rules (0.8595ms)
+Γ£ö login and signup schemas remain independent (0.9944ms)
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ» Failed Suites 15 ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»
+
+ FAIL  tests/auth-api.test.ts [ tests/auth-api.test.ts ]
+Error: Cannot find package '@/lib/api-utils' imported from 'C:/Users/Admin/Desktop/New folder (3)/aromacraft/src/pages/api/auth/check-username.ts'
+ Γ¥» src/pages/api/auth/check-username.ts:2:1
+      1| import type { NextApiRequest, NextApiResponse } from 'next';
+      2| import { validateMethod, jsonError, jsonSuccess } from '@/lib/api-utilΓÇª
+       | ^
+      3| import { findUserByUsername as findDbUserByUsername } from '@/lib/db-aΓÇª
+      4| import { findUserByUsername as findMockUserByUsername } from '@/lib/moΓÇª
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»
+Serialized Error: { code: 'ERR_MODULE_NOT_FOUND' }
+Caused by: Error: Failed to load url @/lib/api-utils (resolved id: @/lib/api-utils) in C:/Users/Admin/Desktop/New folder (3)/aromacraft/src/pages/api/reviews.ts. Does the file exist?
+ Γ¥» loadAndTransform ../../../AppData/Local/npm-cache/_npx/69c381f8ad94b576/node_modules/vite/dist/node/chunks/config.js:22739:33
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[1/15]ΓÄ»
+
+ FAIL  tests/auth-signup-flow.test.ts [ tests/auth-signup-flow.test.ts ]
+Error: No test suite found in file C:/Users/Admin/Desktop/New folder (3)/aromacraft/tests/auth-signup-flow.test.ts
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[2/15]ΓÄ»
+
+ FAIL  tests/avatar-upload.test.ts [ tests/avatar-upload.test.ts ]
+Error: Cannot find package '@/lib/api-utils' imported from 'C:/Users/Admin/Desktop/New folder (3)/aromacraft/src/pages/api/auth/upload-avatar.ts'
+ Γ¥» src/pages/api/auth/upload-avatar.ts:2:1
+      1| import type { NextApiRequest, NextApiResponse } from 'next';
+      2| import { validateMethod, jsonError, jsonSuccess } from '@/lib/api-utilΓÇª
+       | ^
+      3| import { randomUUID } from 'crypto';
+      4| import { getStorageProvider } from '@/lib/providers/factory';
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»
+Serialized Error: { code: 'ERR_MODULE_NOT_FOUND' }
+Caused by: Error: Failed to load url @/lib/api-utils (resolved id: @/lib/api-utils) in C:/Users/Admin/Desktop/New folder (3)/aromacraft/src/pages/api/reviews.ts. Does the file exist?
+ Γ¥» loadAndTransform ../../../AppData/Local/npm-cache/_npx/69c381f8ad94b576/node_modules/vite/dist/node/chunks/config.js:22739:33
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[3/15]ΓÄ»
+
+ FAIL  tests/concurrent-signup.test.ts [ tests/concurrent-signup.test.ts ]
+ FAIL  tests/cookie-flags.test.ts [ tests/cookie-flags.test.ts ]
+ FAIL  tests/identity-normalization.test.ts [ tests/identity-normalization.test.ts ]
+ FAIL  tests/otp-attempt-limit.test.ts [ tests/otp-attempt-limit.test.ts ]
+ FAIL  tests/otp-concurrency.test.ts [ tests/otp-concurrency.test.ts ]
+ FAIL  tests/otp-expiry.test.ts [ tests/otp-expiry.test.ts ]
+ FAIL  tests/session-revoke.test.ts [ tests/session-revoke.test.ts ]
+TypeError: PrismaClient is not a constructor
+ Γ¥» src/lib/prisma.ts:18:49
+     16| };
+     17| 
+     18| export const prisma = globalForPrisma.prisma ?? new PrismaClient();
+       |                                                 ^
+     19| 
+     20| if (process.env.NODE_ENV !== 'production') {
+ Γ¥» src/lib/db-auth.ts:3:1
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[4/15]ΓÄ»
+
+ FAIL  tests/dev-endpoint.test.ts [ tests/dev-endpoint.test.ts ]
+Error: Cannot find package '@/lib/middleware/devGuard' imported from 'C:/Users/Admin/Desktop/New folder (3)/aromacraft/src/pages/api/dev/latest-verification-code.ts'
+ Γ¥» src/pages/api/dev/latest-verification-code.ts:2:1
+      1| import type { NextApiRequest, NextApiResponse } from 'next';
+      2| import { devOnly } from '@/lib/middleware/devGuard';
+       | ^
+      3| import { sendSuccess, sendMethodNotAllowed, sendValidationError, sendNΓÇª
+      4| import { getLatestMockVerificationOtp } from '@/lib/auth-utils';
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»
+Serialized Error: { code: 'ERR_MODULE_NOT_FOUND' }
+Caused by: Error: Failed to load url @/lib/middleware/devGuard (resolved id: @/lib/middleware/devGuard) in C:/Users/Admin/Desktop/New folder (3)/aromacraft/src/pages/api/dev/latest-verification-code.ts. Does the file exist?
+ Γ¥» loadAndTransform ../../../AppData/Local/npm-cache/_npx/69c381f8ad94b576/node_modules/vite/dist/node/chunks/config.js:22739:33
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[5/15]ΓÄ»
+
+ FAIL  tests/phone-validation.test.ts [ tests/phone-validation.test.ts ]
+Error: No test suite found in file C:/Users/Admin/Desktop/New folder (3)/aromacraft/tests/phone-validation.test.ts
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[6/15]ΓÄ»
+
+ FAIL  tests/redis-init.test.ts [ tests/redis-init.test.ts ]
+Error: No test suite found in file C:/Users/Admin/Desktop/New folder (3)/aromacraft/tests/redis-init.test.ts
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[7/15]ΓÄ»
+
+ FAIL  tests/review-destination.test.ts [ tests/review-destination.test.ts ]
+Error: Cannot find package '@/lib/auth-utils' imported from 'C:/Users/Admin/Desktop/New folder (3)/aromacraft/src/pages/api/reviews.ts'
+ Γ¥» src/pages/api/reviews.ts:2:1
+      1| import type { NextApiRequest, NextApiResponse } from 'next';
+      2| import { requireSession } from '@/lib/auth-utils';
+       | ^
+      3| import { jsonError, jsonSuccess, parseJsonBody, validateMethod } from ΓÇª
+      4| import { prisma } from '@/lib/prisma';
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»
+Serialized Error: { code: 'ERR_MODULE_NOT_FOUND' }
+Caused by: Error: Failed to load url @/lib/auth-utils (resolved id: @/lib/auth-utils) in C:/Users/Admin/Desktop/New folder (3)/aromacraft/src/pages/api/reviews.ts. Does the file exist?
+ Γ¥» loadAndTransform ../../../AppData/Local/npm-cache/_npx/69c381f8ad94b576/node_modules/vite/dist/node/chunks/config.js:22739:33
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[8/15]ΓÄ»
+
+ FAIL  tests/security-guards.test.ts [ tests/security-guards.test.ts ]
+Error: No test suite found in file C:/Users/Admin/Desktop/New folder (3)/aromacraft/tests/security-guards.test.ts
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[9/15]ΓÄ»
+
+
+[2m Test Files [22m [1m[31m15 failed[39m[22m[90m (15)[39m
+[2m      Tests [22m [2mno tests[22m
+[2m   Start at [22m 21:41:06
+[2m   Duration [22m 4.50s[2m (transform 8.55s, setup 0ms, collect 5.06s, tests 0ms, environment 5ms, prepare 8.03s)[22m
+

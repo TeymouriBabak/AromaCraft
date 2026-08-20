@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { config as loadEnv } from "dotenv";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,7 +15,9 @@ export default defineConfig({
 
   migrations: {
     path: "prisma/migrations",
+    seed: "npx tsx prisma/seed.ts",
   },
+
 
   engine: "classic",
 

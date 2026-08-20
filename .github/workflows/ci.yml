@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7
+        ports:
+          - 6399:6379
+        options: >-
+          --health-cmd "redis-cli -h 127.0.0.1 -p 6379 ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+      mariadb:
+        image: mariadb:10.11
+        ports:
+          - 3307:3306
+        env:
+          MYSQL_ROOT_PASSWORD: root_dev_password
+          MYSQL_DATABASE: aromacraft
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -P 3306 -uroot -proot_dev_password"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 15
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Generate Prisma client
+        run: npx prisma generate
+      - name: Type check
+        run: npx tsc --noEmit
+      - name: Lint
+        run: npx eslint src tests --max-warnings=0
+      - name: Run tests
+        env:
+          DATABASE_URL: "mysql://root:root_dev_password@127.0.0.1:3307/aromacraft"
+          REDIS_URL: "redis://127.0.0.1:6399"
+        run: npx vitest run

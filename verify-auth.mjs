@@ -1,8 +1,8 @@
 const baseUrl = 'http://127.0.0.1:3000';
 const credentials = [
-  { role: 'customer', identifier: 'tbabak@example.com', password: 'Teymouribabak78#' },
-  { role: 'manager', identifier: 'manager@aromacraft.test', password: 'AromaAdmin2026#' },
-  { role: 'admin', identifier: 'super@aromacraft.test', password: 'SuperAroma2026#' },
+  { role: 'customer', identifier: process.env.VERIFY_CUSTOMER_EMAIL || 'tbabak@example.com', password: process.env.VERIFY_CUSTOMER_PASSWORD || '' },
+  { role: 'admin', identifier: process.env.VERIFY_ADMIN_EMAIL || 'manager@aromacraft.test', password: process.env.VERIFY_ADMIN_PASSWORD || '' },
+  { role: 'admin', identifier: process.env.VERIFY_MANAGER_EMAIL || 'super@aromacraft.test', password: process.env.VERIFY_MANAGER_PASSWORD || '' },
 ];
 
 async function login(role, identifier, password) {

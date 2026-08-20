@@ -4,7 +4,7 @@ import { prisma } from './prisma';
 import type { UserRole } from '../generated/prisma/enums';
 import { normalizePhoneNumber } from './auth-validation';
 
-export type AuthRole = 'customer' | 'manager' | 'admin' | 'super_admin';
+export type AuthRole = 'customer' | 'admin' | 'manager';
 
 function sha256Hex(input: string) {
   return createHash('sha256').update(input).digest('hex');
@@ -30,9 +30,8 @@ export type DbUserRecord = {
 
 const ROLE_MAP = {
   CUSTOMER: 'customer',
-  MANAGER: 'manager',
   ADMIN: 'admin',
-  SUPER_ADMIN: 'super_admin',
+  MANAGER: 'manager',
 } as const;
 
 function mapRole(role: string): AuthRole {

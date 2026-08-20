@@ -1,6 +1,6 @@
 export type SecurityUser = {
   userId: string;
-  role: 'customer' | 'manager' | 'admin' | 'super_admin';
+  role: 'customer' | 'admin' | 'manager';
   isActive: boolean;
 };
 
@@ -12,7 +12,6 @@ export type SessionLike = {
 export function canAccessOrder(actor: SecurityUser, ownerUserId: string, orderId: string) {
   if (!actor.isActive) return false;
   if (actor.role === 'admin') return true;
-  if (actor.role === 'manager') return true;
   return actor.userId === ownerUserId && Boolean(orderId);
 }
 

@@ -241,8 +241,8 @@ async function run() {
       username: 'Tbabak1',
       mobile: '1234567890',
       countryCode: 'US',
-      email: 'tbabak@example.com',
-      password: 'Teymouribabak78#',
+      email: process.env.E2E_CUSTOMER_EMAIL || 'tbabak@example.com',
+      password: process.env.E2E_CUSTOMER_PASSWORD || '',
       verificationCode: '12345678',
     }),
   });

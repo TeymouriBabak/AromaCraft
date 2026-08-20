@@ -1,5 +1,9 @@
-import test from 'node:test';
+import 'dotenv/config';
+import 'tsconfig-paths/register';
+
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
+import type { NextApiRequest, NextApiResponse } from 'next';
 import { randomUUID } from 'crypto';
 import { createDbUser } from '../src/lib/db-auth';
 import { prisma } from '../src/lib/prisma';
@@ -14,7 +18,7 @@ function makeMockRes() {
     json(obj: unknown) { body = obj; return { statusCode, body }; },
     setHeader() { return this; },
     _get() { return { statusCode, body }; },
-  } as unknown as { status(code: number): any; json(obj: unknown): { statusCode: number; body: unknown }; _get(): { statusCode: number; body: unknown } };
+  } as unknown as { status(code: number): unknown; json(obj: unknown): { statusCode: number; body: unknown }; _get(): { statusCode: number; body: unknown } };
 }
 
 test('wrong OTP attempts exhaust the attempt limit', async () => {
@@ -51,7 +55,7 @@ test('wrong OTP attempts exhaust the attempt limit', async () => {
 
   // Submit a wrong code to increment attemptCount to 5 and ensure subsequent rejection
   const wrongRes = makeMockRes();
-  await (handleVerifyAccount as any)({ method: 'POST', body: { email, code: '000000' } } as unknown, wrongRes);
+  await handleVerifyAccount({ method: 'POST', body: { email, code: '000000' } } as unknown as NextApiRequest, wrongRes as unknown as NextApiResponse);
   assert.equal(wrongRes._get().statusCode, 401);
 
   // Confirm attemptCount is now >=5
@@ -60,6 +64,6 @@ test('wrong OTP attempts exhaust the attempt limit', async () => {
 
   // Now even the correct code must be rejected
   const goodRes = makeMockRes();
-  await (handleVerifyAccount as any)({ method: 'POST', body: { email, code: correct } } as unknown, goodRes);
+  await handleVerifyAccount({ method: 'POST', body: { email, code: correct } } as unknown as NextApiRequest, goodRes as unknown as NextApiResponse);
   assert.equal(goodRes._get().statusCode, 401);
 });

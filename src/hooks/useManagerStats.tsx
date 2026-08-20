@@ -2,16 +2,14 @@
 import { useEffect, useState } from 'react';
 import api from '@/lib/api-client';
 
-type ManagerStatsPayload = {
-  pendingOrders?: number;
-  revenueThisWeek?: number;
-  inventoryAlerts?: number;
-  teamResponseRate?: string;
+type ManagerOverview = {
+  totalUsers: number;
+  totalCustomers: number;
+  totalAdmins: number;
+  newUsersThisMonth: number;
 };
 
-type ManagerStatsResponse = ManagerStatsPayload & {
-  overview?: ManagerStatsPayload;
-};
+type ManagerStatsResponse = { overview: ManagerOverview };
 
 export function useManagerStats() {
   const [data, setData] = useState<ManagerStatsResponse | null>(null);
@@ -23,7 +21,7 @@ export function useManagerStats() {
     const controller = new AbortController();
 
     api
-      .get<ManagerStatsResponse>('/api/dashboard/manager/overview')
+      .get<ManagerStatsResponse>('/api/manager/overview')
       .then((d) => {
         if (mounted) setData(d);
       })

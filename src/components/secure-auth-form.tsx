@@ -191,23 +191,9 @@ export default function SecureAuthForm({ onAuthenticated }: { onAuthenticated?: 
       avatarUrl: values.avatarUrl ?? '',
     });
 
-    const debugDisabledState = {
-      signupIsValid,
-      readiness,
-      firstName: Boolean(values.firstName?.trim()),
-      lastName: Boolean(values.lastName?.trim()),
-      gender: Boolean(values.gender?.trim()),
-      username: Boolean(values.username?.trim()),
-      mobile: Boolean(values.mobile?.trim()),
-      email: Boolean(values.email?.trim()),
-      password: Boolean(values.password?.trim()),
-      confirmPassword: Boolean(values.confirmPassword?.trim()),
-      avatarUrl: Boolean(values.avatarUrl?.trim()),
-    };
+    // Removed unused debugDisabledState variable
 
-    if (process.env.NODE_ENV !== 'production') {
-      console.debug('[auth][signup][disabled-state]', debugDisabledState);
-    }
+    // debug log removed to avoid leaking internal state in dev
 
     return readiness && signupIsValid;
   }, [signupIsValid, signupValues]);
@@ -346,23 +332,28 @@ export default function SecureAuthForm({ onAuthenticated }: { onAuthenticated?: 
       });
     }
 
-    const result = await signup({
-      ...values,
-      avatarUrl: values.avatarUrl || undefined,
-    });
-    await new Promise((resolve) => window.setTimeout(resolve, 800));
-    if (result.success) {
-      setPendingEmail(values.email.toLowerCase());
-      setActiveVerificationCode(result.verificationCode ?? '');
-      setVerificationStep("verification");
-      setSubmitState("success");
-      setMessage({ type: "success", text: "Your secure verification code is ready. Enter it to activate your account." });
+    try {
+      const result = await signup({
+        ...values,
+        avatarUrl: values.avatarUrl || undefined,
+      });
+      await new Promise((resolve) => window.setTimeout(resolve, 800));
+      if (result.success) {
+        setPendingEmail(values.email.toLowerCase());
+        setActiveVerificationCode(result.verificationCode ?? '');
+        setVerificationStep("verification");
+        setSubmitState("success");
+        setMessage({ type: "success", text: "Your secure verification code is ready. Enter it to activate your account." });
+        return;
+      }
+      setMessage({ type: "error", text: result.message });
+      setSubmitState("idle");
+    } catch (err) {
+      setMessage({ type: "error", text: (err instanceof Error && err.message) ? err.message : 'Signup failed' });
+      setSubmitState("idle");
+    } finally {
       setIsSubmitting(false);
-      return;
     }
-    setMessage({ type: "error", text: result.message });
-    setSubmitState("idle");
-    setIsSubmitting(false);
   };
 
   const handleVerify = async () => {
@@ -420,7 +411,10 @@ export default function SecureAuthForm({ onAuthenticated }: { onAuthenticated?: 
         const formData = new FormData();
         formData.append('avatar', file);
 
-        const resp = await fetch('/api/auth/upload-avatar', { method: 'POST', body: formData });
+        const controller = new AbortController();
+        const to = window.setTimeout(() => controller.abort(new DOMException('timeout', 'TimeoutError')), 15000);
+        const resp = await fetch('/api/auth/upload-avatar', { method: 'POST', body: formData, signal: controller.signal });
+        clearTimeout(to);
         const json = await resp.json();
         if (json?.ok && json.data && json.data.url) {
           setAvatarPreview(json.data.url);
@@ -843,7 +837,10 @@ export default function SecureAuthForm({ onAuthenticated }: { onAuthenticated?: 
                             const formData = new FormData();
                             formData.append('avatar', file);
 
-                            const resp = await fetch('/api/auth/upload-avatar', { method: 'POST', body: formData });
+                            const controller = new AbortController();
+                            const to = window.setTimeout(() => controller.abort(new DOMException('timeout', 'TimeoutError')), 15000);
+                            const resp = await fetch('/api/auth/upload-avatar', { method: 'POST', body: formData, signal: controller.signal });
+                            clearTimeout(to);
                             const json = await resp.json();
                             if (json?.ok && json.data && json.data.url) {
                               setAvatarPreview(json.data.url);

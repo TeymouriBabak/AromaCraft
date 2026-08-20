@@ -18,9 +18,15 @@ const DEFAULT_HEADERS: Record<string, string> = {
 };
 
 function buildUrl(path: string) {
-  const baseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/$/, '');
+  const rawBase = (process.env.NEXT_PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '');
+  const base = rawBase || '';
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  return baseUrl ? `${baseUrl}${normalizedPath}` : normalizedPath;
+  if (!base) return normalizedPath;
+  // If both base and path contain an "/api" segment at the join boundary, avoid duplicate "/api/api"
+  if (base.endsWith('/api') && normalizedPath.startsWith('/api')) {
+    return `${base}${normalizedPath.slice(4)}`; // remove leading /api from path
+  }
+  return `${base}${normalizedPath}`;
 }
 
 function normalizeHeaders(headers?: HeadersInit): Record<string, string> {
@@ -98,8 +104,14 @@ export function handleApiError(error: unknown, fallbackMessage = 'Something went
   if (error instanceof ApiError) {
     return error;
   }
+  // Map AbortErrors/DOMExceptions from fetch aborts to a user-friendly timeout message
   if (error instanceof Error) {
-    return new ApiError(error.message || fallbackMessage, 500);
+    const name = (error as Error & { name?: string }).name;
+    const message = error.message || fallbackMessage;
+    if (name === 'AbortError' || name === 'TimeoutError') {
+      return new ApiError('Server did not respond in time. Please try again.', 504);
+    }
+    return new ApiError(message || fallbackMessage, 500);
   }
   return new ApiError(fallbackMessage, 500);
 }
@@ -112,10 +124,10 @@ export async function apiRequest<T = unknown>(path: string, opts: RequestInit = 
 }
 
 export const api = {
-  get: <T = unknown>(p: string) => apiRequest<T>(p, { method: 'GET' }),
-  post: <T = unknown>(p: string, body?: unknown) => apiRequest<T>(p, { method: 'POST', body: body ? JSON.stringify(body) : undefined }),
-  put: <T = unknown>(p: string, body?: unknown) => apiRequest<T>(p, { method: 'PUT', body: body ? JSON.stringify(body) : undefined }),
-  del: <T = unknown>(p: string) => apiRequest<T>(p, { method: 'DELETE' }),
+  get: <T = unknown>(p: string, opts?: RequestInit) => apiRequest<T>(p, { method: 'GET', ...(opts ?? {}) }),
+  post: <T = unknown>(p: string, body?: unknown, opts?: RequestInit) => apiRequest<T>(p, { method: 'POST', body: body ? JSON.stringify(body) : undefined, ...(opts ?? {}) }),
+  put: <T = unknown>(p: string, body?: unknown, opts?: RequestInit) => apiRequest<T>(p, { method: 'PUT', body: body ? JSON.stringify(body) : undefined, ...(opts ?? {}) }),
+  del: <T = unknown>(p: string, opts?: RequestInit) => apiRequest<T>(p, { method: 'DELETE', ...(opts ?? {}) }),
 };
 
 export default api;

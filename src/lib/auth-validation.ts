@@ -1,8 +1,8 @@
-import { parsePhoneNumber } from 'libphonenumber-js';
+import { parsePhoneNumber, isValidPhoneNumber } from 'libphonenumber-js/max';
 import { z } from 'zod';
 
 export type LoginMode = 'email' | 'username';
-export type LoginRole = 'customer' | 'manager' | 'admin' | 'super_admin';
+export type LoginRole = 'customer' | 'admin' | 'manager';
 
 export type LoginFormValues = {
   loginMode: LoginMode;
@@ -25,7 +25,7 @@ export type SignupFormValues = {
 
 export const loginSchema = z.object({
   loginMode: z.enum(['email', 'username']),
-  role: z.enum(['customer', 'manager', 'admin', 'super_admin']),
+  role: z.enum(['customer', 'admin', 'manager']),
   identifier: z.string().trim().min(1, 'Please enter your email or username.'),
   password: z.string().trim().min(1, 'Please enter your password.'),
 });
@@ -87,28 +87,25 @@ export function normalizePhoneNumber(value: string): string {
 
   if (candidate.startsWith('00')) {
     candidate = `+${candidate.slice(2)}`;
-  } else if (!candidate.startsWith('+')) {
-    // Handle common local formats that start with a leading zero,
-    // e.g., Iranian mobiles like 09123456789 should normalize to +989123456789
-    if (/^0\d{10}$/.test(digitsOnly)) {
-      // assume Iran local mobile when 11 digits starting with 0
-      candidate = `+98${digitsOnly.slice(1)}`;
-    } else {
-      candidate = `+${digitsOnly}`;
-    }
   }
 
+  // If number looks like local Iranian mobile (11 digits starting with 0),
+  // normalize to +98... to keep backward compatibility.
+  if (!candidate.startsWith('+') && /^0\d{10}$/.test(digitsOnly)) {
+    candidate = `+98${digitsOnly.slice(1)}`;
+  }
+
+  // Try to parse and return E.164 when possible (preferred)
   try {
     const parsed = parsePhoneNumber(candidate);
-    if (parsed && typeof parsed.isValid === 'function' && parsed.isValid() && parsed.number) {
-      return parsed.number;
-    }
+    if (parsed && parsed.number) return parsed.number;
   } catch {
-    // fallback below when libphonenumber metadata is unavailable in this runtime
+    // fall through to regex fallback
   }
 
+  // Last-resort normalization: ensure it looks like E.164 (7-15 digits)
   const normalized = candidate.replace(/\D/g, '');
-  if (/^\+?[1-9]\d{7,14}$/.test(`+${normalized}`)) {
+  if (/^[1-9]\d{7,14}$/.test(normalized)) {
     return `+${normalized}`;
   }
 
@@ -118,18 +115,23 @@ export function normalizePhoneNumber(value: string): string {
 export function isPhoneNumberValid(value: string): boolean {
   const normalized = normalizePhoneNumber(value);
   if (!normalized) return false;
-
+  // If input starts with '+', validate for any country using full metadata
   try {
-    const parsed = parsePhoneNumber(normalized);
-    if (parsed && typeof parsed.isValid === 'function' && parsed.isValid()) {
-      return true;
+    if (normalized.startsWith('+')) {
+      return isValidPhoneNumber(normalized);
+    }
+
+    // For non-E.164 inputs, accept Iranian local format which normalizePhoneNumber
+    // converts to E.164 above (e.g., 09123456789 -> +989123456789)
+    if (/^0\d{10}$/.test(value.replace(/\D/g, ''))) {
+      const parsed = parsePhoneNumber(normalized);
+      return !!(parsed && parsed.isValid && parsed.isValid());
     }
   } catch {
-    // fallback below when libphonenumber metadata is unavailable in this runtime
+    return false;
   }
 
-  const sanitized = normalized.replace(/\s+/g, '');
-  return /^\+?[1-9]\d{7,14}$/.test(sanitized);
+  return false;
 }
 
 export function isSignupFormReady(values: Partial<SignupFormValues>): boolean {

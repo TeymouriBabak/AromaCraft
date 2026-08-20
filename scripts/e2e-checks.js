@@ -30,7 +30,7 @@ async function post(path, body, headers = {}){
   console.log('status', r.status, 'location', r.headers.get('location'));
 
   console.log('\n4) Login as seeded user via POST /api/auth/login');
-  r = await post('/api/auth/login', { identifier: 'tbabak@example.com', password: 'Teymouribabak78#' });
+  r = await post('/api/auth/login', { identifier: process.env.E2E_CUSTOMER_EMAIL || 'tbabak@example.com', password: process.env.E2E_CUSTOMER_PASSWORD || '' });
   console.log('status', r.status);
   // Collect Set-Cookie(s) robustly: Node's global fetch may expose only a single
   // header via `get('set-cookie')`. We defensively parse that value and extract

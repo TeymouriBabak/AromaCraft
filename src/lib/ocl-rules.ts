@@ -8,7 +8,7 @@
  * 1. UNIQUE(mobile) across all Users
  * 2. UNIQUE(email) across all Users
  * 3. UNIQUE(username) across all Users
- * 4. VALIDATE(role) in {'customer', 'admin', 'super_admin'}
+ * 4. VALIDATE(role) in {'customer', 'admin', 'manager'}
  * 5. User must have at least one valid identity (mobile OR email)
  * 6. OTP.code must be exactly 6 digits
  * 7. OTP.expiresAt must be greater than createdAt
@@ -18,7 +18,7 @@
  * 11. AuthSession.user must be non-nullable
  * 12. Session.isAuthenticated requires otpVerified == true
  * 13. Role('customer') cannot access Dashboard('admin')
- * 14. Role('admin') cannot access Settings('super_admin')
+ * 14. Role('admin') cannot access Settings('manager')
  * 15. Avatar.update is restricted to owner == request.user
  * 16. Avatar.mimeType must be in {'image/png', 'image/jpeg', 'image/webp'}
  * 17. Avatar.size must not exceed 5MB
@@ -33,11 +33,11 @@ import type { UserRole } from '../generated/prisma/enums';
 // OCL Rule 1-4: Identity & Role Validation
 // ============================================================================
 
-export const ALLOWED_ROLES: readonly UserRole[] = ['CUSTOMER', 'ADMIN', 'SUPER_ADMIN'];
+export const ALLOWED_ROLES: readonly UserRole[] = ['CUSTOMER', 'ADMIN', 'MANAGER'];
 export const ROLE_HIERARCHY: Record<string, number> = {
   CUSTOMER: 1,
   ADMIN: 2,
-  SUPER_ADMIN: 3,
+  MANAGER: 3,
 };
 
 export function validateRole(role: string): role is UserRole {
@@ -142,7 +142,7 @@ export function validateSessionAuthentication(
 
 /**
  * OCL Rule 13: Role('customer') cannot access Dashboard('admin')
- * OCL Rule 14: Role('admin') cannot access Settings('super_admin')
+ * OCL Rule 14: Role('admin') cannot access Settings('manager')
  */
 export function canAccessResource(
   userRole: UserRole,
@@ -157,8 +157,8 @@ export function canAccessAdminDashboard(userRole: UserRole): boolean {
   return canAccessResource(userRole, 'ADMIN');
 }
 
-export function canAccessSuperAdminSettings(userRole: UserRole): boolean {
-  return canAccessResource(userRole, 'SUPER_ADMIN');
+export function canAccessManagerSettings(userRole: UserRole): boolean {
+  return canAccessResource(userRole, 'MANAGER');
 }
 
 // ============================================================================

@@ -1,5 +1,9 @@
-import test from 'node:test';
+import 'dotenv/config';
+import 'tsconfig-paths/register';
+
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
+import type { NextApiRequest, NextApiResponse } from 'next';
 import { randomUUID } from 'crypto';
 import { createDbUser } from '../src/lib/db-auth';
 import { prisma } from '../src/lib/prisma';
@@ -14,7 +18,7 @@ function makeMockRes() {
     json(obj: unknown) { body = obj; return { statusCode, body }; },
     setHeader() { return this; },
     _get() { return { statusCode, body }; },
-  } as unknown as { status(code: number): any; json(obj: unknown): { statusCode: number; body: unknown }; _get(): { statusCode: number; body: unknown } };
+  } as unknown as { status(code: number): unknown; json(obj: unknown): { statusCode: number; body: unknown }; _get(): { statusCode: number; body: unknown } };
 }
 
 test('concurrent OTP verification: only one attempt succeeds', async () => {
@@ -49,14 +53,14 @@ test('concurrent OTP verification: only one attempt succeeds', async () => {
     },
   });
 
-  const reqFactory = () => ({ method: 'POST', body: { email, code } } as unknown);
+  const reqFactory = () => ({ method: 'POST', body: { email, code } } as unknown as NextApiRequest);
 
   const r1 = makeMockRes();
   const r2 = makeMockRes();
 
   await Promise.all([
-    (async () => { await (handleVerifyAccount as any)(reqFactory(), r1); })(),
-    (async () => { await (handleVerifyAccount as any)(reqFactory(), r2); })(),
+    (async () => { await handleVerifyAccount(reqFactory(), r1 as unknown as NextApiResponse); })(),
+    (async () => { await handleVerifyAccount(reqFactory(), r2 as unknown as NextApiResponse); })(),
   ]);
 
   const out1 = r1._get();
@@ -67,6 +71,6 @@ test('concurrent OTP verification: only one attempt succeeds', async () => {
 
   // Subsequent attempts must fail
   const replayRes = makeMockRes();
-  await (handleVerifyAccount as any)({ method: 'POST', body: { email, code } } as unknown, replayRes);
+  await handleVerifyAccount({ method: 'POST', body: { email, code } } as unknown as NextApiRequest, replayRes as unknown as NextApiResponse);
   assert.equal(replayRes._get().statusCode, 401);
 });

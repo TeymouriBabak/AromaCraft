@@ -1,0 +1,68 @@
+version: '3.8'
+services:
+  redis:
+    image: redis:7
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "127.0.0.1:6399:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-h", "127.0.0.1", "-p", "6379", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mariadb:
+    image: mariadb:10.11
+    environment:
+      MYSQL_ROOT_PASSWORD: root_dev_password
+      MYSQL_DATABASE: aromacraft
+    ports:
+      - "127.0.0.1:3307:3306"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "mysqladmin ping -h 127.0.0.1 -P 3306 -uroot -proot_dev_password" ]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: aromacraft-mysql-dev
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: "devpass"
+      MYSQL_DATABASE: "aromacraft"
+    ports:
+      - "3308:3306"
+    volumes:
+      - aromacraft_mysql_dev_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -pdevpass >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: aromacraft-redis-dev
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis-dev-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -h 127.0.0.1 ping >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  aromacraft_mysql_dev_data:
+    driver: local
+  redis-dev-data:
+    driver: local
+
+  # Redis service for local development
+  redis:
+    # placeholder volume defined above; actual service declared below in services
+    # kept here for compatibility
+    

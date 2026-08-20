@@ -1,0 +1,12 @@
+
+> aromacraft@0.1.0 test
+> tsx tests/auth-api.test.ts && tsx tests/auth-signup-flow.test.ts && tsx tests/review-destination.test.ts && tsx tests/security-guards.test.ts && tsx tests/dev-endpoint.test.ts
+
+Γ£ö check-username returns taken for mock user (25.7395ms)
+Γ£ö check-email returns taken for mock email (4.7169ms)
+Γ£û forgot-password keeps the response generic and does not log sensitive reset data for an existing user (305.1846ms)
+Γ£ö admin-only endpoints reject unauthenticated users and customer role access (253.778ms)
+Γ£ö production does not silently select a mock SMS provider (0.5956ms)
+Γ£ö login rate limiting returns 429 after repeated attempts and does not leak the account identifier (9.4085ms)
+Γ£û signup enforces the canonical rate limit before account creation (3.8249ms)
+Γ£û OTP resend invalidates older valid codes and only the newest OTP succeeds (295.2784ms)

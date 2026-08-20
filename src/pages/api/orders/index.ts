@@ -10,7 +10,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const auth = await requireSession(req, res);
   if (!auth) return null;
 
-  if (auth.user.role === 'admin' || auth.user.role === 'manager') {
+    if (auth.user.role === 'admin' || auth.user.role === 'manager') {
     const orders = await prisma.order.findMany({
       include: { items: { include: { product: true } }, user: true },
       orderBy: { createdAt: 'desc' },

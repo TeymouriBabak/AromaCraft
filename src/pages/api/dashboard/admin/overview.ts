@@ -10,7 +10,7 @@ const overview = {
 };
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
-  const auth = requireRole(req, res, ['admin']);
+  const auth = requireRole(req, res, ['admin', 'manager']);
   if (!auth) return;
   return jsonSuccess(res, { overview }, 200);
 }

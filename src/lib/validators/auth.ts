@@ -13,8 +13,8 @@ export const loginSchema = z.object({
   loginMode: z.enum(['email', 'username'], {
     errorMap: () => ({ message: 'Login mode must be "email" or "username"' }),
   }),
-  role: z.enum(['customer', 'manager', 'admin', 'super_admin'], {
-    errorMap: () => ({ message: 'Role must be "customer", "manager", "admin", or "super_admin"' }),
+  role: z.enum(['customer', 'admin', 'manager'], {
+    errorMap: () => ({ message: 'Role must be "customer", "admin", or "manager"' }),
   }),
   identifier: z
     .string()

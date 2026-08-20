@@ -10,7 +10,7 @@ const overviewData = {
 };
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
-  const auth = requireRole(req, res, ['customer', 'manager', 'admin']);
+  const auth = requireRole(req, res, ['customer', 'admin', 'manager']);
   if (!auth) return;
   return jsonSuccess(res, { overview: overviewData }, 200);
 }

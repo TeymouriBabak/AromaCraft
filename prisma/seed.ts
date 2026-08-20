@@ -5,33 +5,37 @@ import { PrismaClient } from '../src/generated/prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
-  const passwordHash = await hash('Teymouribabak78#', 12);
+  const email = process.env.SEED_MANAGER_EMAIL;
+  const username = process.env.SEED_MANAGER_USERNAME;
+  const password = process.env.SEED_MANAGER_PASSWORD;
 
+  if (!email || !username || !password) {
+    throw new Error('SEED_MANAGER_EMAIL, SEED_MANAGER_USERNAME and SEED_MANAGER_PASSWORD must be set to create the initial MANAGER account');
+  }
+
+  // Hash the password with bcrypt (same as signup flow)
+  const passwordHash = await hash(password, 12);
+
+  // Upsert by email to ensure idempotency
   await prisma.user.upsert({
-    where: { email: 'tbabak@example.com' },
+    where: { email },
     update: {
-      username: 'Tbabak',
-      name: 'Babak Teymouri',
-      firstName: 'Babak',
-      lastName: 'Teymouri',
-      role: 'CUSTOMER',
+      username,
+      role: 'MANAGER',
       passwordHash,
     },
     create: {
-      username: 'Tbabak',
-      email: 'tbabak@example.com',
+      email,
+      username,
       passwordHash,
-      role: 'CUSTOMER',
-      name: 'Babak Teymouri',
-      firstName: 'Babak',
-      lastName: 'Teymouri',
+      role: 'MANAGER',
     },
   });
 }
 
 main()
   .catch((error) => {
-    console.error(error);
+    console.error(error?.message ?? error);
     process.exit(1);
   })
   .finally(async () => {

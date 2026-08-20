@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma';
 // formatAxisLabel removed (unused)
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const auth = await requireRole(req, res, ['customer', 'manager', 'admin']);
+  const auth = await requireRole(req, res, ['customer', 'admin', 'manager']);
   if (!auth) return;
 
   try {

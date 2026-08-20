@@ -1,5 +1,7 @@
 import { mailpitProvider } from './implementations/emailMailpit'
 import { mockSmsProvider } from './implementations/smsMock'
+import { smsConsoleProvider } from './implementations/smsConsole'
+import { emailConsoleProvider } from './implementations/emailConsole'
 import { localStorageProvider } from './implementations/storageLocal'
 import { EmailProviderName } from './emailProvider'
 import { SmsProviderName } from './smsProvider'
@@ -14,6 +16,8 @@ export function getEmailProvider(name?: EmailProviderName) {
   switch (provider) {
     case 'local_mailpit':
       return mailpitProvider
+    case 'console':
+      return emailConsoleProvider
     default:
       return mailpitProvider
   }
@@ -28,6 +32,8 @@ export function getSmsProvider(name?: SmsProviderName) {
   switch (provider) {
     case 'mock_sms':
       return mockSmsProvider
+    case 'console':
+      return smsConsoleProvider
     default:
       return mockSmsProvider
   }

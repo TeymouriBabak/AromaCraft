@@ -12,7 +12,7 @@ type AuthMeResponse = {
     mobile?: string;
     countryCode?: string;
     email?: string;
-    role?: 'customer' | 'manager' | 'admin';
+    role?: 'customer' | 'admin' | 'manager';
   } | null;
 };
 

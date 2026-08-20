@@ -17,7 +17,11 @@ const COLORS = ['#d4a373', '#1A120B', '#c9854d', '#2c1d11', '#f4c36b'];
 
 export default function ManagerDashboard() {
   const { data, loading, error } = useManagerStats();
-  const overview = data?.overview || data;
+  // `useManagerStats` now returns only the manager overview shape; keep backward compatibility
+  const source = (data as unknown) as Record<string, unknown> | undefined;
+  const overview = (source && 'overview' in source && typeof source.overview === 'object' && source.overview != null)
+    ? (source.overview as Record<string, unknown>)
+    : (source ?? {});
 
   if (loading) {
     return <div className="text-sm text-[#6e4b33]">Loading manager overview…</div>;
@@ -35,7 +39,7 @@ export default function ManagerDashboard() {
 
       <div className="mt-4 rounded-2xl border border-[#e9e1d6] bg-[#fdf9f2] p-4 text-sm text-[#2C1D11]">
         <div className="font-semibold">Manager snapshot</div>
-        <div className="mt-1 text-[#6e4b33]">Pending orders: {overview?.pendingOrders || 0} · Revenue this week: {overview?.revenueThisWeek || 0} · Inventory alerts: {overview?.inventoryAlerts || 0} · Response rate: {overview?.teamResponseRate || '—'}</div>
+        <div className="mt-1 text-[#6e4b33]">Pending orders: {typeof overview?.['pendingOrders'] === 'number' ? (overview['pendingOrders'] as number) : 0} · Revenue this week: {typeof overview?.['revenueThisWeek'] === 'number' ? (overview['revenueThisWeek'] as number) : 0} · Inventory alerts: {typeof overview?.['inventoryAlerts'] === 'number' ? (overview['inventoryAlerts'] as number) : 0} · Response rate: {typeof overview?.['teamResponseRate'] === 'number' ? `${overview['teamResponseRate']}%` : '—'}</div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 mt-6">
@@ -53,8 +57,7 @@ export default function ManagerDashboard() {
             </ResponsiveContainer>
           </div>
         </motion.div>
-
-        <motion.div className="rounded-2xl bg-white p-4 shadow" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
+          <motion.div className="rounded-2xl bg-white p-4 shadow" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
           <h3 className="text-sm font-medium">Brand Sales Share</h3>
           <div style={{ width: '100%', height: 220 }}>
             <ResponsiveContainer>
@@ -70,21 +73,20 @@ export default function ManagerDashboard() {
           </div>
         </motion.div>
       </div>
-
-      <div className="mt-6 rounded-2xl bg-white p-4 shadow">
-        <h3 className="text-sm font-medium">Inventory Alerts</h3>
-        <div className="mt-3 grid gap-3">
-          {[{ name: 'Dark Roast Espresso', qty: 12 }, { name: 'Morning Blend', qty: 8 }, { name: 'Ethiopian Single Origin', qty: 3 }].map((it) => (
-            <div key={it.name} className="flex items-center justify-between rounded-lg border p-3">
-              <div>
-                <div className="font-semibold">{it.name}</div>
-                <div className="text-sm text-[#6e4b33]">Low stock alert</div>
+        <div className="mt-6 rounded-2xl bg-white p-4 shadow">
+          <h3 className="text-sm font-medium">Inventory Alerts</h3>
+          <div className="mt-3 grid gap-3">
+            {[{ name: 'Dark Roast Espresso', qty: 12 }, { name: 'Morning Blend', qty: 8 }, { name: 'Ethiopian Single Origin', qty: 3 }].map((it) => (
+              <div key={it.name} className="flex items-center justify-between rounded-lg border p-3">
+                <div>
+                  <div className="font-semibold">{it.name}</div>
+                  <div className="text-sm text-[#6e4b33]">Low stock alert</div>
+                </div>
+                <div className="text-sm">{it.qty} left</div>
               </div>
-              <div className="text-sm">{it.qty} left</div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
     </div>
   );
 }
