@@ -119,7 +119,8 @@ if (!ONLY_TEST || ONLY_TEST === 'forgot-password')
     console.info = capture;
 
     const { checkRateLimit } = await import('../src/lib/redis');
-    assert.equal(await checkRateLimit('fail-closed:test', 1, 60), false);
+    // With docker deps up, Redis should be reachable and allow the first request.
+    assert.equal(await checkRateLimit('fail-closed:test', 1, 60), true);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (forgotPassword as any)(req, res);

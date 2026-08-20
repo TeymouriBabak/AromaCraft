@@ -5,7 +5,7 @@ import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { randomUUID } from 'crypto';
-import { createDbUser } from '../src/lib/db-auth';
+import { createDbUser, findUserByEmail, findUserByUsername, findUserByMobile } from '../src/lib/db-auth';
 import { prisma } from '../src/lib/prisma';
 import { handleVerifyAccount } from '../src/lib/auth-utils';
 import { hashOtp } from '../src/lib/auth/otp';
@@ -23,17 +23,25 @@ function makeMockRes() {
 
 test('expired OTP is rejected', async () => {
   const email = `otp-expired-${Date.now()}@example.com`;
-  const user = await createDbUser({
-    username: `otpexpired${randomUUID().slice(0,8)}`,
+  const uname = `otpexpired${randomUUID().slice(0,8)}`;
+  const mobile = `+1415${String(Date.now() % 100000).padStart(5,'0')}`;
+  let user = await createDbUser({
+    username: uname,
     email,
     password: 'ExpiredOtp!23',
     role: 'customer',
     firstName: 'Otp',
     lastName: 'Expired',
     gender: 'Other',
-    mobile: `+1415${String(Date.now() % 100000).padStart(5,'0')}`,
+    mobile,
     countryCode: '+1',
   });
+  if (!user) {
+    // If creation failed due to unique constraint, attempt to find the existing user
+        user = await findUserByEmail(email).catch(() => null) ??
+          await findUserByUsername(uname).catch(() => null) ??
+          await findUserByMobile(mobile).catch(() => null);
+  }
   if (!user) throw new Error('failed to create test user');
 
   const code = '111222';

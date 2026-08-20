@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import 'tsconfig-paths/register';
 
-import { test } from 'vitest';
+import { test, beforeEach, afterEach } from 'vitest';
 import assert from 'node:assert/strict';
 
 import * as redisModule from '../src/lib/redis';
@@ -25,6 +25,26 @@ async function resetState() {
   const { createClient } = await import('redis');
   redisModule.setCreateRedisClient(createClient);
 }
+
+// Silence noisy Redis fallback warnings during these unit tests so test
+// output remains clean when running the full suite with real services.
+let _origWarn: typeof console.warn;
+let _origError: typeof console.error;
+let _origLog: typeof console.log;
+beforeEach(() => {
+  _origWarn = console.warn;
+  _origError = console.error;
+  _origLog = console.log;
+  const _noop = () => {};
+  console.warn = _noop as unknown as typeof console.warn;
+  console.error = _noop as unknown as typeof console.error;
+  console.log = _noop as unknown as typeof console.log;
+});
+afterEach(() => {
+  console.warn = _origWarn;
+  console.error = _origError;
+  console.log = _origLog;
+});
 
 test('checkRateLimit initializes Redis lazily on first call', async () => {
   await resetState();
