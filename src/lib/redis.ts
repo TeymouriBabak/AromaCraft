@@ -42,12 +42,9 @@ export async function initRedis(): Promise<RedisClientType | null> {
       // Narrowing the opts type to allow adding socket.connectTimeout safely
       // Use unknown to avoid `any` while still allowing runtime augmentation
       const augmentedOpts = opts as unknown as Record<string, unknown>;
-      // Use a longer connect timeout in the `test` environment to avoid
-      // spurious failures on CI or slower developer machines.
-      const connectTimeoutMs = process.env.NODE_ENV === 'test' ? 5000 : 2000;
       augmentedOpts.socket = {
         ...((augmentedOpts.socket as Record<string, unknown>) || {}),
-        connectTimeout: connectTimeoutMs,
+        connectTimeout: 2000,
         reconnectStrategy: false,
       };
       augmentedOpts.disableOfflineQueue = true;
@@ -78,7 +75,7 @@ export async function initRedis(): Promise<RedisClientType | null> {
 
       // Attempt to connect but fail fast (timeout). Avoid long internal reconnect backoffs.
       const connectPromise = candidate.connect();
-      const timeoutMs = process.env.NODE_ENV === 'test' ? 5000 : 2000;
+      const timeoutMs = 2000;
       const timed = new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs).unref());
       const res = await Promise.race([connectPromise.then(() => true).catch(() => null), timed]);
       if (!res) {
@@ -339,4 +336,13 @@ if (process.env.NODE_ENV === 'test') {
 // Test helper to replace the client factory in tests without mutating the ESM namespace.
 export function setCreateRedisClient(fn: unknown) {
   createRedisClient = fn as typeof nodeCreateClient;
+}
+
+// Test helper to reset internal state (for test isolation). Only used by tests.
+export function resetRedisTestState() {
+  initPromise = null;
+  redisClient = null;
+  redisErrorHandler = null;
+  redisLoggedUnavailable = false;
+  createRedisClient = nodeCreateClient;
 }

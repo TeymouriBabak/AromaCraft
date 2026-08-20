@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import 'tsconfig-paths/register';
 
-import { test, beforeEach, afterEach } from 'vitest';
+import { test, beforeAll, beforeEach, afterEach } from 'vitest';
 import assert from 'node:assert/strict';
 
 import * as redisModule from '../src/lib/redis';
@@ -24,26 +24,50 @@ async function resetState() {
   // restore factory to real impl
   const { createClient } = await import('redis');
   redisModule.setCreateRedisClient(createClient);
+  // reset internal flags so a simulated failure doesn't leak between tests
+  const maybe = redisModule as unknown as { resetRedisTestState?: () => void };
+  if (typeof maybe.resetRedisTestState === 'function') maybe.resetRedisTestState();
 }
 
-// Silence noisy Redis fallback warnings during these unit tests so test
-// output remains clean when running the full suite with real services.
-let _origWarn: typeof console.warn;
-let _origError: typeof console.error;
-let _origLog: typeof console.log;
-beforeEach(() => {
-  _origWarn = console.warn;
-  _origError = console.error;
-  _origLog = console.log;
-  const _noop = () => {};
-  console.warn = _noop as unknown as typeof console.warn;
-  console.error = _noop as unknown as typeof console.error;
-  console.log = _noop as unknown as typeof console.log;
+// Keep console logging enabled so tests surface Redis fallback warnings
+// if the Redis client falls back; tests should fail if fallback occurs.
+
+// Suite-wide console capture: collect warn/error messages and allow
+// specific tests to opt into expecting fallback messages. Tests must
+// explicitly mark `allowFallback = true` when they intentionally
+// simulate Redis unavailability.
+let captured: string[] = [];
+let allowFallback = false;
+const FALLBACK_PATTERNS = [/\[redis\].*continuing without Redis/i, /redis unavailable/i, /connection timeout/i, /rate-limit\] Redis unavailable/i];
+const origWarn = console.warn;
+const origError = console.error;
+
+beforeAll(() => {
+  console.warn = (...args: unknown[]) => {
+    try { captured.push(String(args.join(' '))); } catch {}
+    return (origWarn as (...a: unknown[]) => void)(...args as unknown as unknown[]);
+  };
+  console.error = (...args: unknown[]) => {
+    try { captured.push(String(args.join(' '))); } catch {}
+    return (origError as (...a: unknown[]) => void)(...args as unknown as unknown[]);
+  };
 });
+
+beforeEach(() => {
+  captured = [];
+  allowFallback = false;
+});
+
 afterEach(() => {
-  console.warn = _origWarn;
-  console.error = _origError;
-  console.log = _origLog;
+  // If the test did not opt-in to expect fallback messages, fail
+  // if any captured messages match known fallback patterns.
+  const hits = captured.filter(msg => FALLBACK_PATTERNS.some(rx => rx.test(msg)));
+  if (!allowFallback && hits.length > 0) {
+    // restore originals before throwing to avoid affecting other suites
+    console.warn = origWarn;
+    console.error = origError;
+    throw new Error(`Unexpected Redis fallback logs detected: ${hits.join(' | ')}`);
+  }
 });
 
 test('checkRateLimit initializes Redis lazily on first call', async () => {
@@ -100,6 +124,11 @@ test('concurrent initializations share a single attempt', async () => {
 
 test('failed connection remains fail-closed and allows retry later', async () => {
   await resetState();
+  // This test intentionally simulates a transient connect failure and
+  // therefore is allowed to emit Redis fallback logs. Mark it so the
+  // suite-wide guard does not fail it, and assert the expected messages
+  // are present.
+  allowFallback = true;
 
   let attempts = 0;
   const factory = () => {
@@ -120,10 +149,19 @@ test('failed connection remains fail-closed and allows retry later', async () =>
   const first = await redisModule.checkRateLimit('r:1', 5, 60);
   assert.equal(first, false, 'Should be fail-closed on first failed init');
 
+  // Ensure no Redis fallback warning was emitted to console
+  // (this test suite expects a real Redis; warnings indicate fallback behavior)
+
   // Retry should attempt to initialize again and succeed
   const second = await redisModule.checkRateLimit('r:1', 5, 60);
   assert.equal(second, true, 'Should succeed after retry');
   assert.equal(attempts >= 2, true);
+
+  // Assert that expected fallback messages were emitted
+  const hits = captured.filter(msg => FALLBACK_PATTERNS.some(rx => rx.test(msg)));
+  if (hits.length === 0) {
+    throw new Error('Expected Redis fallback logs during simulated failure, but none were captured');
+  }
 });
 
 test('stale/closed client is not treated as healthy', async () => {

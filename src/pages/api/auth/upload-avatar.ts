@@ -67,9 +67,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (process.env.NODE_ENV === 'production') {
         return jsonError(res, 'rate_limiter_unavailable', 'Rate limiting unavailable. Try again later.', 503);
       }
-      if (process.env.NODE_ENV !== 'test') {
-        console.warn('[upload-avatar] Redis check unavailable, continuing in dev mode');
-      }
+      console.warn('[upload-avatar] Redis check unavailable, continuing in dev mode');
     }
   }
 

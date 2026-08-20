@@ -57,6 +57,8 @@ function makeMultipartReq(file: Buffer, mimeType: string, filename: string, fiel
     async *[Symbol.asyncIterator]() {
       yield Buffer.from(body, 'binary');
     },
+    // Minimal socket stub used by handler to determine client IP
+    socket: { remoteAddress: '127.0.0.1' } as unknown,
   } as unknown as NextApiRequest;
 }
 
@@ -64,6 +66,7 @@ function makeJsonReq(payload: Record<string, unknown>): NextApiRequest {
   return {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
+    socket: { remoteAddress: '127.0.0.1' } as unknown,
     body: payload,
   } as unknown as NextApiRequest;
 }

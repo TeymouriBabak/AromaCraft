@@ -5,7 +5,7 @@ import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { randomUUID } from 'crypto';
-import { createDbUser, findUserByEmail } from '../src/lib/db-auth';
+import { createDbUser } from '../src/lib/db-auth';
 import { prisma } from '../src/lib/prisma';
 import { handleVerifyAccount } from '../src/lib/auth-utils';
 import { hashOtp } from '../src/lib/auth/otp';
@@ -23,7 +23,7 @@ function makeMockRes() {
 
 test('concurrent OTP verification: only one attempt succeeds', async () => {
   const email = `otp-concurrent-${Date.now()}@example.com`;
-  let user = await createDbUser({
+  const user = await createDbUser({
     username: `otpcon${randomUUID().slice(0,8)}`,
     email,
     password: 'OtpRace!23',
@@ -34,9 +34,6 @@ test('concurrent OTP verification: only one attempt succeeds', async () => {
     mobile: `+1415${String(Date.now() % 100000).padStart(5,'0')}`,
     countryCode: '+1',
   });
-  if (!user) {
-    user = await findUserByEmail(email).catch(() => null);
-  }
   if (!user) throw new Error('failed to create test user');
 
   const code = '654321';
