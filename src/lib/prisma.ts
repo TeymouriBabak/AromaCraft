@@ -5,8 +5,9 @@ import { fileURLToPath } from 'node:url';
 import * as path from 'node:path';
 import type { PrismaClient as PrismaClientType } from '../generated/prisma/client';
 
-// Provide sensible defaults for test environment when running locally
-if (process.env.NODE_ENV === 'test' || process.env.npm_lifecycle_event === 'test') {
+// Provide sensible defaults for local development and test environments
+// so the app can run locally without requiring internet or extra env setup.
+if (process.env.NODE_ENV !== 'production') {
   if (!process.env.DATABASE_URL) {
     // Default to docker-compose mariadb mapping used in this repo
     process.env.DATABASE_URL = 'mysql://root:root_dev_password@127.0.0.1:3307/aromacraft';
@@ -110,26 +111,40 @@ if (process.env.NODE_ENV !== 'production') {
 
 // Startup DB health check: fail fast when the app boots in dev/production
 // Tests should skip the health check when NODE_ENV=test
+// Startup DB health check: fail fast in production, but in development try retries
+// so the app can start while DB containers come up behind it.
 if (process.env.NODE_ENV !== 'test') {
   void (async () => {
-    try {
-      // Try a lightweight query to ensure DB is reachable
-      await prisma.$connect();
-      // perform a simple query to validate connectivity
-      await prisma.$queryRawUnsafe('SELECT 1');
-      // keep connection open for reuse
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      // Provide a clear failure message and exit to fail fast
-      // Avoid stack traces which may leak secrets
-      console.error('\nAromacraft startup error: unable to connect to the database.');
-      console.error('Details:', msg);
-      // In dev, suggest common fixes
-      if (process.env.NODE_ENV !== 'production') {
-        console.error('Ensure your database is running and DATABASE_URL is correct.');
+    const maxRetries = process.env.NODE_ENV === 'production' ? 1 : 5;
+    const delayMs = 2000;
+    let attempt = 0;
+    while (attempt < maxRetries) {
+      try {
+        // Try a lightweight query to ensure DB is reachable
+        await prisma.$connect();
+        // perform a simple query to validate connectivity
+        await prisma.$queryRawUnsafe('SELECT 1');
+        // connected successfully
+        return;
+      } catch (err) {
+        attempt += 1;
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`Database connection attempt ${attempt} failed:`, msg);
+        if (attempt >= maxRetries) {
+          if (process.env.NODE_ENV === 'production') {
+            console.error('\nAromacraft startup error: unable to connect to the database.');
+            console.error('Details:', msg);
+            process.exit(1);
+          } else {
+            console.error('Dev: giving up after retries. App will continue but DB may be unavailable.');
+            console.error('Ensure your database is running and DATABASE_URL is correct.');
+            return;
+          }
+        }
+        // wait before retrying
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise((res) => setTimeout(res, delayMs));
       }
-      // Exit with non-zero code so process managers notice the failure
-      process.exit(1);
     }
   })();
 }

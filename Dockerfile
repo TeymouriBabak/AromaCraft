@@ -1,9 +1,8 @@
-FROM node:20-slim AS deps
+FROM node:18-alpine AS deps
 WORKDIR /usr/src/app
 
-RUN apt-get update \
-&& apt-get install -y --no-install-recommends openssl ca-certificates \
-&& rm -rf /var/lib/apt/lists/*
+# Alpine: install minimal runtime deps needed by Prisma and OpenSSL
+RUN apk add --no-cache openssl ca-certificates bash build-base python3 make g++ libc6-compat
 
 # Copy lockfile and package manifests for reproducible installs
 COPY package*.json ./
@@ -11,12 +10,11 @@ COPY package*.json ./
 # Install all dependencies (including dev) so native optional binaries are available
 RUN npm ci
 
-FROM node:20-slim AS builder
+FROM node:18-alpine AS builder
 WORKDIR /usr/src/app
 
-RUN apt-get update \
-&& apt-get install -y --no-install-recommends openssl ca-certificates \
-&& rm -rf /var/lib/apt/lists/*
+# Ensure build tools and certificates are present for generating Prisma client
+RUN apk add --no-cache openssl ca-certificates bash build-base python3 make g++ libc6-compat
 
 # Copy node_modules from deps stage to retain installed binaries
 COPY --from=deps /usr/src/app/node_modules ./node_modules
@@ -30,15 +28,13 @@ ENV DATABASE_URL="mysql://prisma:prisma@127.0.0.1:3306/aromacraft"
 RUN npx prisma generate --schema=prisma/schema.prisma
 RUN npm run build
 
-FROM node:20-slim AS runner
+FROM node:18-alpine AS runner
 WORKDIR /usr/src/app
 ENV NODE_ENV=production
 
 # Install OpenSSL required by Prisma query engine, then create a non-root user
-RUN apt-get update && apt-get install -y openssl ca-certificates --no-install-recommends \
-	&& rm -rf /var/lib/apt/lists/* \
-	|| true
-RUN groupadd -r appuser || true && useradd -r -g appuser -m -d /home/appuser appuser || true
+RUN apk add --no-cache openssl ca-certificates bash libc6-compat || true
+RUN addgroup -S appuser && adduser -S -G appuser appuser || true
 
 # Copy only production package metadata and install production deps
 COPY package*.json ./

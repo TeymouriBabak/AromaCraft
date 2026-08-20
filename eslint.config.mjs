@@ -14,6 +14,9 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Ignore generated Prisma client
     "src/generated/**",
+    // Ignore helper scripts and migration verification scripts
+    "scripts/**",
+    "prisma/verify_*.js",
   ]),
 ]);
 
