@@ -1,4 +1,3 @@
-version: '3.8'
 services:
   redis:
     image: redis:7
@@ -23,46 +22,8 @@ services:
       interval: 5s
       timeout: 3s
       retries: 15
-services:
-  mysql:
-    image: mysql:8.0
-    container_name: aromacraft-mysql-dev
-    restart: unless-stopped
-    environment:
-      MYSQL_ROOT_PASSWORD: "devpass"
-      MYSQL_DATABASE: "aromacraft"
-    ports:
-      - "3308:3306"
-    volumes:
-      - aromacraft_mysql_dev_data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -pdevpass >/dev/null 2>&1 || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-
-  redis:
-    image: redis:7-alpine
-    container_name: aromacraft-redis-dev
-    restart: unless-stopped
-    ports:
-      - "6380:6379"
-    volumes:
-      - redis-dev-data:/data
-    healthcheck:
-      test: ["CMD-SHELL", "redis-cli -h 127.0.0.1 ping >/dev/null 2>&1 || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
 volumes:
-  aromacraft_mysql_dev_data:
-    driver: local
-  redis-dev-data:
+  mariadb_data:
     driver: local
 
-  # Redis service for local development
-  redis:
-    # placeholder volume defined above; actual service declared below in services
-    # kept here for compatibility
-    
