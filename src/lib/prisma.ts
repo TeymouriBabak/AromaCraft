@@ -12,7 +12,8 @@ if (process.env.NODE_ENV === 'test' || process.env.npm_lifecycle_event === 'test
     process.env.DATABASE_URL = 'mysql://root:root_dev_password@127.0.0.1:3307/aromacraft';
   }
   if (!process.env.REDIS_URL) {
-    process.env.REDIS_URL = 'redis://127.0.0.1:6379';
+    // Host maps Redis container 6379 -> host 6399 in docker-compose.dev.yml
+    process.env.REDIS_URL = 'redis://127.0.0.1:6399';
   }
 }
 
