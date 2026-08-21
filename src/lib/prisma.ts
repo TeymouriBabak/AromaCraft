@@ -1,5 +1,4 @@
 import * as GeneratedPrisma from '../generated/prisma/client';
-import * as GeneratedPrismaIndex from '../generated/prisma/index.js';
 import { getPrismaClientClass } from '../generated/prisma/internal/class';
 import { fileURLToPath } from 'node:url';
 import * as path from 'node:path';
@@ -89,7 +88,7 @@ function findPrismaConstructor(gen: unknown): PrismaConstructor | null {
   return null;
 }
 
-const PrismaCtor = findPrismaConstructor(GeneratedPrisma) ?? findPrismaConstructor(GeneratedPrismaIndex) ?? ((): PrismaConstructor => {
+const PrismaCtor = findPrismaConstructor(GeneratedPrisma) ?? ((): PrismaConstructor => {
   const dirname = path.dirname(fileURLToPath(import.meta.url));
   return getPrismaClientClass(dirname) as unknown as PrismaConstructor;
 })();
@@ -142,7 +141,6 @@ if (process.env.NODE_ENV !== 'test') {
           }
         }
         // wait before retrying
-        // eslint-disable-next-line no-await-in-loop
         await new Promise((res) => setTimeout(res, delayMs));
       }
     }

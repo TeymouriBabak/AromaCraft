@@ -1,8 +1,10 @@
-FROM node:18-alpine AS deps
+FROM node:20-bookworm-slim AS deps
 WORKDIR /usr/src/app
 
-# Alpine: install minimal runtime deps needed by Prisma and OpenSSL
-RUN apk add --no-cache openssl ca-certificates bash build-base python3 make g++ libc6-compat
+# Debian base avoids the Alpine package-manager TLS failures seen in this environment
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openssl ca-certificates bash build-essential python3 make g++ libc6 && \
+    rm -rf /var/lib/apt/lists/*
 
 # Copy lockfile and package manifests for reproducible installs
 COPY package*.json ./
@@ -10,11 +12,13 @@ COPY package*.json ./
 # Install all dependencies (including dev) so native optional binaries are available
 RUN npm ci
 
-FROM node:18-alpine AS builder
+FROM node:20-bookworm-slim AS builder
 WORKDIR /usr/src/app
 
 # Ensure build tools and certificates are present for generating Prisma client
-RUN apk add --no-cache openssl ca-certificates bash build-base python3 make g++ libc6-compat
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openssl ca-certificates bash build-essential python3 make g++ libc6 && \
+    rm -rf /var/lib/apt/lists/*
 
 # Copy node_modules from deps stage to retain installed binaries
 COPY --from=deps /usr/src/app/node_modules ./node_modules
@@ -24,17 +28,18 @@ COPY . .
 # Provide a temporary DATABASE_URL during build so Prisma can generate engines
 ENV DATABASE_URL="mysql://prisma:prisma@127.0.0.1:3306/aromacraft"
 # Generate Prisma client if present, then build the app
-# Ensure Prisma client is generated for the linux runtime inside the builder
 RUN npx prisma generate --schema=prisma/schema.prisma
 RUN npm run build
 
-FROM node:18-alpine AS runner
+FROM node:20-bookworm-slim AS runner
 WORKDIR /usr/src/app
 ENV NODE_ENV=production
 
 # Install OpenSSL required by Prisma query engine, then create a non-root user
-RUN apk add --no-cache openssl ca-certificates bash libc6-compat || true
-RUN addgroup -S appuser && adduser -S -G appuser appuser || true
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openssl ca-certificates bash libc6 && \
+    rm -rf /var/lib/apt/lists/* \
+    && groupadd --system appuser && useradd --system --gid appuser appuser || true
 
 # Copy only production package metadata and install production deps
 COPY package*.json ./
