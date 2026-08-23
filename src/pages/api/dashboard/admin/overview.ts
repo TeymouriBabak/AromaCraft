@@ -9,8 +9,11 @@ const overview = {
   systemHealth: 'Stable',
 };
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
-  const auth = requireRole(req, res, ['admin', 'manager']);
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  const auth = await requireRole(req, res, ['admin', 'manager']);
   if (!auth) return;
   return jsonSuccess(res, { overview }, 200);
 }

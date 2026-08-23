@@ -1,17 +1,12 @@
-"use client";
+'use client';
 
-import Image from "next/image";
-import { useState, useMemo, useCallback, useEffect } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  Search,
-  SlidersHorizontal,
-  X,
-  Menu,
-} from "lucide-react";
-import { products } from "@/data/products-multi-brand";
-import { COFFEE_BRANDS } from "@/data/coffee-brands";
+import Image from 'next/image';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Search, SlidersHorizontal, X, Menu } from 'lucide-react';
+import type { Product } from '@/lib/shop-products';
+import { COFFEE_BRANDS } from '@/data/coffee-brands';
 import {
   ROAST_LEVELS,
   PROCESSES,
@@ -25,7 +20,7 @@ import {
   SIZES,
   GRIND_OPTIONS,
   SPECIAL_TAGS,
-} from "@/data/coffee-brands";
+} from '@/data/coffee-brands';
 import {
   filterProducts,
   sortProducts,
@@ -34,20 +29,26 @@ import {
   EMPTY_FILTER_STATE,
   type FilterState,
   type SortOption,
-} from "@/lib/filter-utils";
-import Autocomplete from "@/components/autocomplete";
-import { AccordionFilter, FilterChipsRow, type FilterGroup } from "@/components/filter-components";
-import { ProductCard } from "@/components/product-card";
+} from '@/lib/filter-utils';
+import Autocomplete from '@/components/autocomplete';
+import {
+  AccordionFilter,
+  FilterChipsRow,
+  type FilterGroup,
+} from '@/components/filter-components';
+import { ProductCard } from '@/components/product-card';
 import {
   TrustStrip,
   EmptyState,
   LoadingCard,
   ResultsToolbar,
   QuickFilterChips,
-} from "@/components/shop-ui-components";
-import { useWishlist } from "@/components/wishlist-context";
+} from '@/components/shop-ui-components';
+import { useWishlist } from '@/components/wishlist-context';
 
-function buildFilterStateFromSearchParams(searchParams: ReturnType<typeof useSearchParams>): FilterState {
+function buildFilterStateFromSearchParams(
+  searchParams: ReturnType<typeof useSearchParams>
+): FilterState {
   const nextState = {
     ...EMPTY_FILTER_STATE,
     brands: new Set<string>(),
@@ -63,7 +64,7 @@ function buildFilterStateFromSearchParams(searchParams: ReturnType<typeof useSea
     sizes: new Set<string>(),
     grindOptions: new Set<string>(),
     specialTags: new Set<string>(),
-    searchQuery: "",
+    searchQuery: '',
     inStockOnly: false,
   } satisfies FilterState;
 
@@ -72,39 +73,61 @@ function buildFilterStateFromSearchParams(searchParams: ReturnType<typeof useSea
   }
 
   const params = Object.fromEntries(Array.from(searchParams.entries()));
-  const queryParams = params as Partial<Record<"brands" | "roast" | "brew" | "tags" | "search" | "sort", string>>;
+  const queryParams = params as Partial<
+    Record<'brands' | 'roast' | 'brew' | 'tags' | 'search' | 'sort', string>
+  >;
 
   if (queryParams.brands) {
-    nextState.brands = new Set(queryParams.brands.split(",").filter(Boolean));
+    nextState.brands = new Set(queryParams.brands.split(',').filter(Boolean));
   }
-  if (queryParams.roast) nextState.roastLevels = new Set(queryParams.roast.split(",").filter(Boolean));
-  if (queryParams.brew) nextState.brewMethods = new Set(queryParams.brew.split(",").filter(Boolean));
-  if (queryParams.tags) nextState.specialTags = new Set(queryParams.tags.split(",").filter(Boolean));
+  if (queryParams.roast)
+    nextState.roastLevels = new Set(
+      queryParams.roast.split(',').filter(Boolean)
+    );
+  if (queryParams.brew)
+    nextState.brewMethods = new Set(
+      queryParams.brew.split(',').filter(Boolean)
+    );
+  if (queryParams.tags)
+    nextState.specialTags = new Set(
+      queryParams.tags.split(',').filter(Boolean)
+    );
   if (queryParams.search) nextState.searchQuery = queryParams.search;
 
   return nextState;
 }
 
-function getSortFromSearchParams(searchParams: ReturnType<typeof useSearchParams>): SortOption {
+function getSortFromSearchParams(
+  searchParams: ReturnType<typeof useSearchParams>
+): SortOption {
   if (!searchParams) {
-    return "best-selling";
+    return 'best-selling';
   }
 
   const params = Object.fromEntries(Array.from(searchParams.entries()));
-  const queryParams = params as Partial<Record<"sort", string>>;
-  return (queryParams.sort as SortOption | undefined) ?? "best-selling";
+  const queryParams = params as Partial<Record<'sort', string>>;
+  return (queryParams.sort as SortOption | undefined) ?? 'best-selling';
 }
 
-export default function ShopPage() {
+export default function ShopPage({ products }: { products: Product[] }) {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [filterState, setFilterState] = useState<FilterState>(() => buildFilterStateFromSearchParams(searchParams));
-  const [sortBy, setSortBy] = useState<SortOption>(() => getSortFromSearchParams(searchParams));
+  const [filterState, setFilterState] = useState<FilterState>(() =>
+    buildFilterStateFromSearchParams(searchParams)
+  );
+  const [sortBy, setSortBy] = useState<SortOption>(() =>
+    getSortFromSearchParams(searchParams)
+  );
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeQuickFilter, setActiveQuickFilter] = useState<string | undefined>();
+  const [activeQuickFilter, setActiveQuickFilter] = useState<
+    string | undefined
+  >();
   const { itemIds: wishlistItemIdsArray, toggleWishlist } = useWishlist();
-  const wishlistItemIds = useMemo(() => new Set(wishlistItemIdsArray), [wishlistItemIdsArray]);
+  const wishlistItemIds = useMemo(
+    () => new Set(wishlistItemIdsArray),
+    [wishlistItemIdsArray]
+  );
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 300);
@@ -114,31 +137,47 @@ export default function ShopPage() {
   const filteredAndSorted = useMemo(() => {
     const filtered = filterProducts(products, filterState);
     return sortProducts(filtered, sortBy);
-  }, [filterState, sortBy]);
+  }, [products, filterState, sortBy]);
 
   const activeFilterLabels = useMemo(() => {
     return getActiveFilterLabels(filterState);
   }, [filterState]);
 
   const filterGroups = useMemo((): FilterGroup[] => {
-    const brandsCount = countFilterOptions(products, "brands", filterState);
-    const roastCount = countFilterOptions(products, "roastLevels", filterState);
-    const processCount = countFilterOptions(products, "processes", filterState);
-    const originCount = countFilterOptions(products, "origins", filterState);
-    const brewCount = countFilterOptions(products, "brewMethods", filterState);
-    const flavorCount = countFilterOptions(products, "flavorNotes", filterState);
-    const typeCount = countFilterOptions(products, "coffeeTypes", filterState);
-    const bodyCount = countFilterOptions(products, "bodyLevels", filterState);
-    const acidityCount = countFilterOptions(products, "acidityLevels", filterState);
-    const sweetnessCount = countFilterOptions(products, "sweetnessLevels", filterState);
-    const sizeCount = countFilterOptions(products, "sizes", filterState);
-    const grindCount = countFilterOptions(products, "grindOptions", filterState);
-    const tagCount = countFilterOptions(products, "specialTags", filterState);
+    const brandsCount = countFilterOptions(products, 'brands', filterState);
+    const roastCount = countFilterOptions(products, 'roastLevels', filterState);
+    const processCount = countFilterOptions(products, 'processes', filterState);
+    const originCount = countFilterOptions(products, 'origins', filterState);
+    const brewCount = countFilterOptions(products, 'brewMethods', filterState);
+    const flavorCount = countFilterOptions(
+      products,
+      'flavorNotes',
+      filterState
+    );
+    const typeCount = countFilterOptions(products, 'coffeeTypes', filterState);
+    const bodyCount = countFilterOptions(products, 'bodyLevels', filterState);
+    const acidityCount = countFilterOptions(
+      products,
+      'acidityLevels',
+      filterState
+    );
+    const sweetnessCount = countFilterOptions(
+      products,
+      'sweetnessLevels',
+      filterState
+    );
+    const sizeCount = countFilterOptions(products, 'sizes', filterState);
+    const grindCount = countFilterOptions(
+      products,
+      'grindOptions',
+      filterState
+    );
+    const tagCount = countFilterOptions(products, 'specialTags', filterState);
 
     return [
       {
-        id: "brands",
-        title: "Brand",
+        id: 'brands',
+        title: 'Brand',
         options: COFFEE_BRANDS.map((brand) => ({
           label: brand.displayName,
           value: brand.id,
@@ -146,8 +185,8 @@ export default function ShopPage() {
         })),
       },
       {
-        id: "roastLevels",
-        title: "Roast Level",
+        id: 'roastLevels',
+        title: 'Roast Level',
         options: Array.from(ROAST_LEVELS).map((level) => ({
           label: level,
           value: level,
@@ -155,8 +194,8 @@ export default function ShopPage() {
         })),
       },
       {
-        id: "coffeeTypes",
-        title: "Coffee Type",
+        id: 'coffeeTypes',
+        title: 'Coffee Type',
         options: Array.from(COFFEE_TYPES).map((type) => ({
           label: type,
           value: type,
@@ -164,8 +203,8 @@ export default function ShopPage() {
         })),
       },
       {
-        id: "processes",
-        title: "Process",
+        id: 'processes',
+        title: 'Process',
         options: Array.from(PROCESSES).map((process) => ({
           label: process,
           value: process,
@@ -173,8 +212,8 @@ export default function ShopPage() {
         })),
       },
       {
-        id: "origins",
-        title: "Origin Region",
+        id: 'origins',
+        title: 'Origin Region',
         options: Array.from(ORIGINS).map((origin) => ({
           label: origin,
           value: origin,
@@ -182,8 +221,8 @@ export default function ShopPage() {
         })),
       },
       {
-        id: "brewMethods",
-        title: "Brew Method",
+        id: 'brewMethods',
+        title: 'Brew Method',
         options: Array.from(BREW_METHODS).map((method) => ({
           label: method,
           value: method,
@@ -191,8 +230,8 @@ export default function ShopPage() {
         })),
       },
       {
-        id: "flavorNotes",
-        title: "Flavor Notes",
+        id: 'flavorNotes',
+        title: 'Flavor Notes',
         options: Array.from(FLAVOR_NOTES).map((note) => ({
           label: note,
           value: note,
@@ -200,8 +239,8 @@ export default function ShopPage() {
         })),
       },
       {
-        id: "bodyLevels",
-        title: "Body",
+        id: 'bodyLevels',
+        title: 'Body',
         options: Array.from(BODY_LEVELS).map((body) => ({
           label: body,
           value: body,
@@ -209,8 +248,8 @@ export default function ShopPage() {
         })),
       },
       {
-        id: "acidityLevels",
-        title: "Acidity",
+        id: 'acidityLevels',
+        title: 'Acidity',
         options: Array.from(ACIDITY_LEVELS).map((acidity) => ({
           label: acidity,
           value: acidity,
@@ -218,8 +257,8 @@ export default function ShopPage() {
         })),
       },
       {
-        id: "sweetnessLevels",
-        title: "Sweetness",
+        id: 'sweetnessLevels',
+        title: 'Sweetness',
         options: Array.from(SWEETNESS_LEVELS).map((sweetness) => ({
           label: sweetness,
           value: sweetness,
@@ -227,8 +266,8 @@ export default function ShopPage() {
         })),
       },
       {
-        id: "sizes",
-        title: "Size / Format",
+        id: 'sizes',
+        title: 'Size / Format',
         options: Array.from(SIZES).map((size) => ({
           label: size,
           value: size,
@@ -236,8 +275,8 @@ export default function ShopPage() {
         })),
       },
       {
-        id: "grindOptions",
-        title: "Grind Type",
+        id: 'grindOptions',
+        title: 'Grind Type',
         options: Array.from(GRIND_OPTIONS).map((grind) => ({
           label: grind,
           value: grind,
@@ -245,8 +284,8 @@ export default function ShopPage() {
         })),
       },
       {
-        id: "specialTags",
-        title: "Special Offers",
+        id: 'specialTags',
+        title: 'Special Offers',
         options: Array.from(SPECIAL_TAGS).map((tag) => ({
           label: tag,
           value: tag,
@@ -254,61 +293,58 @@ export default function ShopPage() {
         })),
       },
     ];
-  }, [filterState]);
+  }, [products, filterState]);
 
-  const handleFilterToggle = useCallback(
-    (groupId: string, value: string) => {
-      setFilterState((prev) => {
-        const key = groupId as keyof Omit<
-          FilterState,
-          "searchQuery" | "inStockOnly"
-        >;
-        const newSet = new Set(prev[key] as Set<string>);
+  const handleFilterToggle = useCallback((groupId: string, value: string) => {
+    setFilterState((prev) => {
+      const key = groupId as keyof Omit<
+        FilterState,
+        'searchQuery' | 'inStockOnly'
+      >;
+      const newSet = new Set(prev[key] as Set<string>);
 
-        if (newSet.has(value)) {
-          newSet.delete(value);
-        } else {
-          newSet.add(value);
-        }
+      if (newSet.has(value)) {
+        newSet.delete(value);
+      } else {
+        newSet.add(value);
+      }
 
-        return { ...prev, [key]: newSet };
-      });
-    },
-    []
-  );
+      return { ...prev, [key]: newSet };
+    });
+  }, []);
 
   const handleRemoveFilter = (filterId: string) => {
-    const [type, ...valueParts] = filterId.split("-");
-    const value = valueParts.join("-");
+    const [type, ...valueParts] = filterId.split('-');
+    const value = valueParts.join('-');
 
     setFilterState((prev) => {
       const key =
-        type === "brand"
-          ? "brands"
-          : type === "roast"
-            ? "roastLevels"
-            : type === "process"
-              ? "processes"
-              : type === "origin"
-                ? "origins"
-                : type === "brew"
-                  ? "brewMethods"
-                  : type === "flavor"
-                    ? "flavorNotes"
-                    : type === "type"
-                      ? "coffeeTypes"
-                      : type === "body"
-                        ? "bodyLevels"
-                        : type === "acidity"
-                          ? "acidityLevels"
-                          : type === "sweet"
-                            ? "sweetnessLevels"
-                            : type === "size"
-                              ? "sizes"
-                              : type === "grind"
-                                ? "grindOptions"
-                                : type === "tag"
-                                  ? "specialTags"
+        type === 'brand'
+          ? 'brands'
+          : type === 'roast'
+            ? 'roastLevels'
+            : type === 'process'
+              ? 'processes'
+              : type === 'origin'
+                ? 'origins'
+                : type === 'brew'
+                  ? 'brewMethods'
+                  : type === 'flavor'
+                    ? 'flavorNotes'
+                    : type === 'type'
+                      ? 'coffeeTypes'
+                      : type === 'body'
+                        ? 'bodyLevels'
+                        : type === 'acidity'
+                          ? 'acidityLevels'
+                          : type === 'sweet'
+                            ? 'sweetnessLevels'
+                            : type === 'size'
+                              ? 'sizes'
+                              : type === 'grind'
+                                ? 'grindOptions'
+                                : type === 'tag'
+                                  ? 'specialTags'
                                   : null;
 
       if (!key) return prev;
@@ -335,12 +371,16 @@ export default function ShopPage() {
 
   useEffect(() => {
     const params = new URLSearchParams();
-    if (filterState.brands.size) params.set("brands", Array.from(filterState.brands).join(","));
-    if (filterState.roastLevels.size) params.set("roast", Array.from(filterState.roastLevels).join(","));
-    if (filterState.brewMethods.size) params.set("brew", Array.from(filterState.brewMethods).join(","));
-    if (filterState.specialTags.size) params.set("tags", Array.from(filterState.specialTags).join(","));
-    if (filterState.searchQuery) params.set("search", filterState.searchQuery);
-    if (sortBy) params.set("sort", sortBy);
+    if (filterState.brands.size)
+      params.set('brands', Array.from(filterState.brands).join(','));
+    if (filterState.roastLevels.size)
+      params.set('roast', Array.from(filterState.roastLevels).join(','));
+    if (filterState.brewMethods.size)
+      params.set('brew', Array.from(filterState.brewMethods).join(','));
+    if (filterState.specialTags.size)
+      params.set('tags', Array.from(filterState.specialTags).join(','));
+    if (filterState.searchQuery) params.set('search', filterState.searchQuery);
+    if (sortBy) params.set('sort', sortBy);
 
     router.replace(`/shop?${params.toString()}`);
   }, [filterState, sortBy, router]);
@@ -348,56 +388,61 @@ export default function ShopPage() {
   const handleQuickFilter = (filterId: string) => {
     setActiveQuickFilter(activeQuickFilter === filterId ? undefined : filterId);
 
-    if (filterId === "best-sellers") {
+    if (filterId === 'best-sellers') {
       setFilterState((prev) => ({
         ...prev,
-        specialTags: new Set(["Best Seller"]),
+        specialTags: new Set(['Best Seller']),
       }));
-    } else if (filterId === "new-arrivals") {
+    } else if (filterId === 'new-arrivals') {
       setFilterState((prev) => ({
         ...prev,
-        specialTags: new Set(["New Arrival"]),
+        specialTags: new Set(['New Arrival']),
       }));
-    } else if (filterId === "espresso") {
+    } else if (filterId === 'espresso') {
       setFilterState((prev) => ({
         ...prev,
-        brewMethods: new Set(["Espresso"]),
+        brewMethods: new Set(['Espresso']),
       }));
-    } else if (filterId === "light-roast") {
+    } else if (filterId === 'light-roast') {
       setFilterState((prev) => ({
         ...prev,
-        roastLevels: new Set(["Light"]),
+        roastLevels: new Set(['Light']),
       }));
-    } else if (filterId === "dark-roast") {
+    } else if (filterId === 'dark-roast') {
       setFilterState((prev) => ({
         ...prev,
-        roastLevels: new Set(["Dark"]),
+        roastLevels: new Set(['Dark']),
       }));
-    } else if (filterId === "single-origin") {
+    } else if (filterId === 'single-origin') {
       setFilterState((prev) => ({
         ...prev,
-        coffeeTypes: new Set(["Single Origin"]),
+        coffeeTypes: new Set(['Single Origin']),
       }));
-    } else if (filterId === "blends") {
+    } else if (filterId === 'blends') {
       setFilterState((prev) => ({
         ...prev,
-        coffeeTypes: new Set(["Blend"]),
+        coffeeTypes: new Set(['Blend']),
       }));
     }
   };
 
   const quickFilters = [
-    { id: "best-sellers", label: "Best Sellers" },
-    { id: "new-arrivals", label: "New Arrivals" },
-    { id: "espresso", label: "Espresso" },
-    { id: "light-roast", label: "Light Roast" },
-    { id: "dark-roast", label: "Dark Roast" },
-    { id: "single-origin", label: "Single Origin" },
-    { id: "blends", label: "Blends" },
+    { id: 'best-sellers', label: 'Best Sellers' },
+    { id: 'new-arrivals', label: 'New Arrivals' },
+    { id: 'espresso', label: 'Espresso' },
+    { id: 'light-roast', label: 'Light Roast' },
+    { id: 'dark-roast', label: 'Dark Roast' },
+    { id: 'single-origin', label: 'Single Origin' },
+    { id: 'blends', label: 'Blends' },
   ];
 
   // Brand quick filters (top chips) — show icons when available
-  const brandQuickChips = COFFEE_BRANDS.map((b) => ({ id: b.id, label: b.displayName, logo: b.logo, color: b.color }));
+  const brandQuickChips = COFFEE_BRANDS.map((b) => ({
+    id: b.id,
+    label: b.displayName,
+    logo: b.logo,
+    color: b.color,
+  }));
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 lg:px-8">
@@ -431,8 +476,9 @@ export default function ShopPage() {
             transition={{ delay: 0.3 }}
             className="mt-4 max-w-2xl text-lg text-[#6e4b33] dark:text-[#e8d8c0]"
           >
-            Explore carefully selected coffees from Costa, Starbucks, Dunkin, and more. Filter by brand, roast,
-            origin, and flavor profile to find your perfect cup.
+            Explore carefully selected coffees from Costa, Starbucks, Dunkin,
+            and more. Filter by brand, roast, origin, and flavor profile to find
+            your perfect cup.
           </motion.p>
         </div>
 
@@ -447,11 +493,15 @@ export default function ShopPage() {
             <div className="relative flex items-center gap-3">
               <Search size={18} className="text-[#d4a373] absolute left-4" />
               <div className="w-full pl-10">
-                <Autocomplete value={filterState.searchQuery} onChange={(v) => handleSearchChange(v)} />
+                <Autocomplete
+                  products={products}
+                  value={filterState.searchQuery}
+                  onChange={(v) => handleSearchChange(v)}
+                />
               </div>
               {filterState.searchQuery && (
                 <button
-                  onClick={() => handleSearchChange("")}
+                  onClick={() => handleSearchChange('')}
                   className="ml-3 rounded-full p-1 hover:bg-black/5 dark:hover:bg-white/5"
                   aria-label="Clear search"
                 >
@@ -477,17 +527,30 @@ export default function ShopPage() {
             key={chip.id}
             onClick={() => {
               // toggle brand
-              handleFilterToggle("brands", chip.id);
+              handleFilterToggle('brands', chip.id);
             }}
             aria-pressed={filterState.brands.has(chip.id)}
             className={`flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium transition ${
               filterState.brands.has(chip.id)
-                ? "bg-[#d4a373] text-white shadow-lg"
-                : "border border-[#d4a373]/30 bg-white text-[#1a0f0a] hover:border-[#d4a373]"
+                ? 'bg-[#d4a373] text-white shadow-lg'
+                : 'border border-[#d4a373]/30 bg-white text-[#1a0f0a] hover:border-[#d4a373]'
             }`}
-            style={filterState.brands.has(chip.id) ? { backgroundColor: chip.color } : {}}
+            style={
+              filterState.brands.has(chip.id)
+                ? { backgroundColor: chip.color }
+                : {}
+            }
           >
-            {chip.logo && <Image src={chip.logo} alt="" width={16} height={16} unoptimized className="h-4 w-4 rounded-sm object-contain" />}
+            {chip.logo && (
+              <Image
+                src={chip.logo}
+                alt=""
+                width={16}
+                height={16}
+                unoptimized
+                className="h-4 w-4 rounded-sm object-contain"
+              />
+            )}
             <span>{chip.label}</span>
           </button>
         ))}
@@ -526,31 +589,31 @@ export default function ShopPage() {
                 key={group.id}
                 group={group}
                 selectedValues={
-                  group.id === "brands"
+                  group.id === 'brands'
                     ? filterState.brands
-                    : group.id === "roastLevels"
+                    : group.id === 'roastLevels'
                       ? filterState.roastLevels
-                      : group.id === "processes"
+                      : group.id === 'processes'
                         ? filterState.processes
-                        : group.id === "origins"
+                        : group.id === 'origins'
                           ? filterState.origins
-                          : group.id === "brewMethods"
+                          : group.id === 'brewMethods'
                             ? filterState.brewMethods
-                            : group.id === "flavorNotes"
+                            : group.id === 'flavorNotes'
                               ? filterState.flavorNotes
-                              : group.id === "coffeeTypes"
+                              : group.id === 'coffeeTypes'
                                 ? filterState.coffeeTypes
-                                : group.id === "bodyLevels"
+                                : group.id === 'bodyLevels'
                                   ? filterState.bodyLevels
-                                  : group.id === "acidityLevels"
+                                  : group.id === 'acidityLevels'
                                     ? filterState.acidityLevels
-                                    : group.id === "sweetnessLevels"
+                                    : group.id === 'sweetnessLevels'
                                       ? filterState.sweetnessLevels
-                                      : group.id === "sizes"
+                                      : group.id === 'sizes'
                                         ? filterState.sizes
-                                        : group.id === "grindOptions"
+                                        : group.id === 'grindOptions'
                                           ? filterState.grindOptions
-                                          : group.id === "specialTags"
+                                          : group.id === 'specialTags'
                                             ? filterState.specialTags
                                             : new Set()
                 }
@@ -596,7 +659,12 @@ export default function ShopPage() {
                 className="h-full w-full max-w-88 overflow-y-auto rounded-r-3xl border-r border-[#d4a373]/20 bg-white/95 p-6 shadow-xl dark:bg-[#23110c]"
               >
                 <div className="mb-6 flex items-center justify-between">
-                  <h2 id="filter-drawer-title" className="font-semibold text-[#1a0f0a] dark:text-[#f6e5d1]">Filters</h2>
+                  <h2
+                    id="filter-drawer-title"
+                    className="font-semibold text-[#1a0f0a] dark:text-[#f6e5d1]"
+                  >
+                    Filters
+                  </h2>
                   <button
                     type="button"
                     onClick={() => setIsSidebarOpen(false)}
@@ -613,31 +681,31 @@ export default function ShopPage() {
                       key={group.id}
                       group={group}
                       selectedValues={
-                        group.id === "brands"
+                        group.id === 'brands'
                           ? filterState.brands
-                          : group.id === "roastLevels"
+                          : group.id === 'roastLevels'
                             ? filterState.roastLevels
-                            : group.id === "processes"
+                            : group.id === 'processes'
                               ? filterState.processes
-                              : group.id === "origins"
+                              : group.id === 'origins'
                                 ? filterState.origins
-                                : group.id === "brewMethods"
+                                : group.id === 'brewMethods'
                                   ? filterState.brewMethods
-                                  : group.id === "flavorNotes"
+                                  : group.id === 'flavorNotes'
                                     ? filterState.flavorNotes
-                                    : group.id === "coffeeTypes"
+                                    : group.id === 'coffeeTypes'
                                       ? filterState.coffeeTypes
-                                      : group.id === "bodyLevels"
+                                      : group.id === 'bodyLevels'
                                         ? filterState.bodyLevels
-                                        : group.id === "acidityLevels"
+                                        : group.id === 'acidityLevels'
                                           ? filterState.acidityLevels
-                                          : group.id === "sweetnessLevels"
+                                          : group.id === 'sweetnessLevels'
                                             ? filterState.sweetnessLevels
-                                            : group.id === "sizes"
+                                            : group.id === 'sizes'
                                               ? filterState.sizes
-                                              : group.id === "grindOptions"
+                                              : group.id === 'grindOptions'
                                                 ? filterState.grindOptions
-                                                : group.id === "specialTags"
+                                                : group.id === 'specialTags'
                                                   ? filterState.specialTags
                                                   : new Set()
                       }
@@ -668,8 +736,10 @@ export default function ShopPage() {
               activeFilters={activeFilterLabels.map((label) => ({
                 id: label.id,
                 label: label.label,
-                variant: label.type === "brand" ? "brand" : "default",
-                brandColor: COFFEE_BRANDS.find((b) => b.id === label.label.toLowerCase())?.color,
+                variant: label.type === 'brand' ? 'brand' : 'default',
+                brandColor: COFFEE_BRANDS.find(
+                  (b) => b.id === label.label.toLowerCase()
+                )?.color,
               }))}
               onRemove={handleRemoveFilter}
               onClearAll={handleClearAllFilters}
@@ -702,7 +772,7 @@ export default function ShopPage() {
                     product={product}
                     index={index}
                     onQuickView={(product) => {
-                      console.log("Quick view:", product);
+                      console.log('Quick view:', product);
                     }}
                     onWishlist={toggleWishlist}
                     isWishlisted={wishlistItemIds.has(product.id)}

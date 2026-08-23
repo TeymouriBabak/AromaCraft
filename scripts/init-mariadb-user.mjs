@@ -1,9 +1,9 @@
 import { execSync } from 'child_process';
 
 const commands = [
-  "mariadb -uroot -e \"CREATE DATABASE IF NOT EXISTS aromacraft;\"",
-  'mariadb -uroot -e "CREATE USER IF NOT EXISTS \'aromacraft_user\'@\'%\' IDENTIFIED BY \'local_app_password\';"',
-  'mariadb -uroot -e "GRANT ALL PRIVILEGES ON aromacraft.* TO \'aromacraft_user\'@\'%\';"',
+  'mariadb -uroot -e "CREATE DATABASE IF NOT EXISTS aromacraft;"',
+  "mariadb -uroot -e \"CREATE USER IF NOT EXISTS 'aromacraft_user'@'%' IDENTIFIED BY 'local_app_password';\"",
+  "mariadb -uroot -e \"GRANT ALL PRIVILEGES ON aromacraft.* TO 'aromacraft_user'@'%';\"",
   'mariadb -uroot -e "FLUSH PRIVILEGES;"',
 ];
 

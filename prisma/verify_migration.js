@@ -5,7 +5,11 @@ const prisma = new PrismaClient();
 
 async function main() {
   const cntOld = await prisma.user.count({ where: { role: 'SUPER_ADMIN' } });
-  const managers = await prisma.user.findMany({ where: { role: 'MANAGER' }, select: { id: true, email: true, role: true }, take: 20 });
+  const managers = await prisma.user.findMany({
+    where: { role: 'MANAGER' },
+    select: { id: true, email: true, role: true },
+    take: 20,
+  });
   console.log(JSON.stringify({ cntOld, managers }, null, 2));
 }
 

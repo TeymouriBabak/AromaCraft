@@ -1,4 +1,4 @@
-import { SmsProvider } from '../smsProvider'
+import { SmsProvider } from '../smsProvider';
 
 export const smsConsoleProvider: SmsProvider = {
   sendSms: async (to, message) => {
@@ -12,10 +12,13 @@ export const smsConsoleProvider: SmsProvider = {
           return '***';
         }
       };
-      console.info(`[sms-console] To: ${maskPhone(String(to))} | Message: [REDACTED]`);
+      console.info(
+        `[sms-console] To: ${maskPhone(String(to))} | Message: [REDACTED]`
+      );
       const maybeCode = message.match(/\b\d{4,6}\b/);
-      if (maybeCode) console.info(`[sms-console] verification code: [REDACTED]`);
+      if (maybeCode)
+        console.info(`[sms-console] verification code: [REDACTED]`);
     }
     return Promise.resolve();
   },
-}
+};

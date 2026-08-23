@@ -9,7 +9,8 @@ import type { PrismaClient as PrismaClientType } from '../generated/prisma/clien
 if (process.env.NODE_ENV !== 'production') {
   if (!process.env.DATABASE_URL) {
     // Default to docker-compose mariadb mapping used in this repo
-    process.env.DATABASE_URL = 'mysql://root:root_dev_password@127.0.0.1:3307/aromacraft';
+    process.env.DATABASE_URL =
+      'mysql://root:root_dev_password@127.0.0.1:3307/aromacraft';
   }
   if (!process.env.REDIS_URL) {
     // Host maps Redis container 6379 -> host 6399 in docker-compose.dev.yml
@@ -27,26 +28,50 @@ function findPrismaConstructor(gen: unknown): PrismaConstructor | null {
   // treat as record for property introspection
   const rec = gen as Record<string, unknown>;
   if (rec.PrismaClient && typeof rec.PrismaClient === 'function') {
-    return rec.PrismaClient as unknown as new (...args: unknown[]) => PrismaClientType;
+    return rec.PrismaClient as unknown as new (
+      ...args: unknown[]
+    ) => PrismaClientType;
   }
   if (rec.default) {
     const d = rec.default as unknown;
-    if (typeof d === 'function') return d as unknown as new (...args: unknown[]) => PrismaClientType;
+    if (typeof d === 'function')
+      return d as unknown as new (...args: unknown[]) => PrismaClientType;
     if (typeof (d as Record<string, unknown>).PrismaClient === 'function') {
-      return (d as Record<string, unknown>).PrismaClient as unknown as new (...args: unknown[]) => PrismaClientType;
+      return (d as Record<string, unknown>).PrismaClient as unknown as new (
+        ...args: unknown[]
+      ) => PrismaClientType;
     }
   }
 
   // Some bundlers wrap exports under nested `default` or `module.exports` properties.
-  const maybeNested = (rec.default as unknown as Record<string, unknown> | undefined) ?? (rec as Record<string, unknown>);
+  const maybeNested =
+    (rec.default as unknown as Record<string, unknown> | undefined) ??
+    (rec as Record<string, unknown>);
   if (maybeNested) {
-    const nestedDefault = (maybeNested as Record<string, unknown>)?.default as unknown;
-    if (nestedDefault && typeof (nestedDefault as Record<string, unknown>).PrismaClient === 'function') {
-      return (nestedDefault as Record<string, unknown>).PrismaClient as unknown as new (...args: unknown[]) => PrismaClientType;
+    const nestedDefault = (maybeNested as Record<string, unknown>)
+      ?.default as unknown;
+    if (
+      nestedDefault &&
+      typeof (nestedDefault as Record<string, unknown>).PrismaClient ===
+        'function'
+    ) {
+      return (nestedDefault as Record<string, unknown>)
+        .PrismaClient as unknown as new (
+        ...args: unknown[]
+      ) => PrismaClientType;
     }
-    const nestedModuleExports = (maybeNested as Record<string, unknown>)?.['module.exports'] as unknown;
-    if (nestedModuleExports && typeof (nestedModuleExports as Record<string, unknown>).PrismaClient === 'function') {
-      return (nestedModuleExports as Record<string, unknown>).PrismaClient as unknown as new (...args: unknown[]) => PrismaClientType;
+    const nestedModuleExports = (maybeNested as Record<string, unknown>)?.[
+      'module.exports'
+    ] as unknown;
+    if (
+      nestedModuleExports &&
+      typeof (nestedModuleExports as Record<string, unknown>).PrismaClient ===
+        'function'
+    ) {
+      return (nestedModuleExports as Record<string, unknown>)
+        .PrismaClient as unknown as new (
+        ...args: unknown[]
+      ) => PrismaClientType;
     }
   }
 
@@ -56,10 +81,15 @@ function findPrismaConstructor(gen: unknown): PrismaConstructor | null {
     if (!obj || depth > 2 || seen.has(obj)) return null;
     seen.add(obj);
     if (typeof obj === 'function') {
-      const fnLike = obj as unknown as { name?: string; prototype?: Record<string, unknown> };
-      if (fnLike.name === 'PrismaClient') return obj as unknown as PrismaConstructor;
+      const fnLike = obj as unknown as {
+        name?: string;
+        prototype?: Record<string, unknown>;
+      };
+      if (fnLike.name === 'PrismaClient')
+        return obj as unknown as PrismaConstructor;
       const proto = fnLike.prototype;
-      if (proto && typeof proto.connect === 'function') return obj as unknown as PrismaConstructor;
+      if (proto && typeof proto.connect === 'function')
+        return obj as unknown as PrismaConstructor;
     }
     if (typeof obj === 'object') {
       for (const key of Object.keys(obj as Record<string, unknown>)) {
@@ -75,25 +105,36 @@ function findPrismaConstructor(gen: unknown): PrismaConstructor | null {
     return null;
   }
 
-  const scanned = scan(rec) ?? scan((rec as Record<string, unknown>).default) ?? scan((rec as Record<string, unknown>)['module.exports']);
+  const scanned =
+    scan(rec) ??
+    scan((rec as Record<string, unknown>).default) ??
+    scan((rec as Record<string, unknown>)['module.exports']);
   if (scanned) return scanned;
 
   for (const key of Object.keys(rec)) {
     const v = rec[key];
-    if (v && typeof (v as Record<string, unknown>).PrismaClient === 'function') {
-      return (v as Record<string, unknown>).PrismaClient as unknown as PrismaConstructor;
+    if (
+      v &&
+      typeof (v as Record<string, unknown>).PrismaClient === 'function'
+    ) {
+      return (v as Record<string, unknown>)
+        .PrismaClient as unknown as PrismaConstructor;
     }
     if (typeof v === 'function') return v as unknown as PrismaConstructor;
   }
   return null;
 }
 
-const PrismaCtor = findPrismaConstructor(GeneratedPrisma) ?? ((): PrismaConstructor => {
-  const dirname = path.dirname(fileURLToPath(import.meta.url));
-  return getPrismaClientClass(dirname) as unknown as PrismaConstructor;
-})();
+const PrismaCtor =
+  findPrismaConstructor(GeneratedPrisma) ??
+  ((): PrismaConstructor => {
+    const dirname = path.dirname(fileURLToPath(import.meta.url));
+    return getPrismaClientClass(dirname) as unknown as PrismaConstructor;
+  })();
 if (!PrismaCtor) {
-  throw new Error('Unable to locate a PrismaClient constructor from generated client');
+  throw new Error(
+    'Unable to locate a PrismaClient constructor from generated client'
+  );
 }
 
 type PrismaClientInstance = PrismaClientType;
@@ -112,7 +153,11 @@ if (process.env.NODE_ENV !== 'production') {
 // Tests should skip the health check when NODE_ENV=test
 // Startup DB health check: fail fast in production, but in development try retries
 // so the app can start while DB containers come up behind it.
-if (process.env.NODE_ENV !== 'test') {
+// Skip the eager health check while `next build` collects page data:
+// there is no database inside the build container, and process.exit(1)
+// would kill the build worker.
+const isBuildPhase = process.env.NEXT_PHASE === 'phase-production-build';
+if (process.env.NODE_ENV !== 'test' && !isBuildPhase) {
   void (async () => {
     const maxRetries = process.env.NODE_ENV === 'production' ? 1 : 5;
     const delayMs = 2000;
@@ -131,12 +176,18 @@ if (process.env.NODE_ENV !== 'test') {
         console.error(`Database connection attempt ${attempt} failed:`, msg);
         if (attempt >= maxRetries) {
           if (process.env.NODE_ENV === 'production') {
-            console.error('\nAromacraft startup error: unable to connect to the database.');
+            console.error(
+              '\nAromacraft startup error: unable to connect to the database.'
+            );
             console.error('Details:', msg);
             process.exit(1);
           } else {
-            console.error('Dev: giving up after retries. App will continue but DB may be unavailable.');
-            console.error('Ensure your database is running and DATABASE_URL is correct.');
+            console.error(
+              'Dev: giving up after retries. App will continue but DB may be unavailable.'
+            );
+            console.error(
+              'Ensure your database is running and DATABASE_URL is correct.'
+            );
             return;
           }
         }

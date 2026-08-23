@@ -2,7 +2,10 @@ import 'dotenv/config';
 import 'tsconfig-paths/register';
 
 import { test } from 'vitest';
-import { allowRedisFallback, getCapturedConsoleMessages } from './setup/console-guard';
+import {
+  allowRedisFallback,
+  getCapturedConsoleMessages,
+} from './setup/console-guard';
 import assert from 'node:assert/strict';
 
 import * as redisModule from '../src/lib/redis';
@@ -21,13 +24,16 @@ type MockRedis = {
 
 // Helper: reset module state between tests
 async function resetState() {
-  try { await redisModule.closeRedis(); } catch {}
+  try {
+    await redisModule.closeRedis();
+  } catch {}
   // restore factory to real impl
   const { createClient } = await import('redis');
   redisModule.setCreateRedisClient(createClient);
   // reset internal flags so a simulated failure doesn't leak between tests
   const maybe = redisModule as unknown as { resetRedisTestState?: () => void };
-  if (typeof maybe.resetRedisTestState === 'function') maybe.resetRedisTestState();
+  if (typeof maybe.resetRedisTestState === 'function')
+    maybe.resetRedisTestState();
 }
 
 // Shared console guard lives in tests/setup/console-guard.ts
@@ -39,14 +45,28 @@ test('checkRateLimit initializes Redis lazily on first call', async () => {
   const store = new Map<string, number>();
   const mockClient: MockRedis = {
     isOpen: false,
-    async connect() { mockClient.isOpen = true; },
+    async connect() {
+      mockClient.isOpen = true;
+    },
     on() {},
     off() {},
-    async incr(k: string) { const v = (store.get(k) || 0) + 1; store.set(k, v); return v; },
-    async expire() { return 1; },
-    async get(k: string) { return String(store.get(k) || 0); },
-    async del() { return 1; },
-    async quit() { mockClient.isOpen = false; }
+    async incr(k: string) {
+      const v = (store.get(k) || 0) + 1;
+      store.set(k, v);
+      return v;
+    },
+    async expire() {
+      return 1;
+    },
+    async get(k: string) {
+      return String(store.get(k) || 0);
+    },
+    async del() {
+      return 1;
+    },
+    async quit() {
+      mockClient.isOpen = false;
+    },
   };
 
   redisModule.setCreateRedisClient(() => mockClient);
@@ -65,12 +85,23 @@ test('concurrent initializations share a single attempt', async () => {
     created += 1;
     const client: MockRedis = {
       isOpen: false,
-      async connect() { await new Promise(r => setTimeout(r, 20)); client.isOpen = true; },
+      async connect() {
+        await new Promise((r) => setTimeout(r, 20));
+        client.isOpen = true;
+      },
       on() {},
       off() {},
-      async incr(k: string) { const v = (store.get(k) || 0) + 1; store.set(k, v); return v; },
-      async expire() { return 1; },
-      async quit() { client.isOpen = false; }
+      async incr(k: string) {
+        const v = (store.get(k) || 0) + 1;
+        store.set(k, v);
+        return v;
+      },
+      async expire() {
+        return 1;
+      },
+      async quit() {
+        client.isOpen = false;
+      },
     };
     return client;
   };
@@ -97,10 +128,19 @@ test('failed connection remains fail-closed and allows retry later', async () =>
       isOpen: false,
       on() {},
       off() {},
-      async connect() { if (attempts === 1) throw new Error('connect-fail'); client.isOpen = true; },
-      async incr() { return 1; },
-      async expire() { return 1; },
-      async quit() { client.isOpen = false; }
+      async connect() {
+        if (attempts === 1) throw new Error('connect-fail');
+        client.isOpen = true;
+      },
+      async incr() {
+        return 1;
+      },
+      async expire() {
+        return 1;
+      },
+      async quit() {
+        client.isOpen = false;
+      },
     };
     return client;
   };
@@ -118,9 +158,17 @@ test('failed connection remains fail-closed and allows retry later', async () =>
   assert.equal(attempts >= 2, true);
 
   // Assert that expected fallback messages were emitted
-  const hits = getCapturedConsoleMessages().filter(s => /continuing without Redis/i.test(s) || /Redis unavailable/i.test(s) || /connection timeout/i.test(s) || /rate-limit\] Redis unavailable/i.test(s));
+  const hits = getCapturedConsoleMessages().filter(
+    (s) =>
+      /continuing without Redis/i.test(s) ||
+      /Redis unavailable/i.test(s) ||
+      /connection timeout/i.test(s) ||
+      /rate-limit\] Redis unavailable/i.test(s)
+  );
   if (hits.length === 0) {
-    throw new Error('Expected Redis fallback logs during simulated failure, but none were captured');
+    throw new Error(
+      'Expected Redis fallback logs during simulated failure, but none were captured'
+    );
   }
 });
 
@@ -130,12 +178,22 @@ test('stale/closed client is not treated as healthy', async () => {
   const store = new Map<string, number>();
   const clientA: MockRedis = {
     isOpen: true,
-    async connect() { clientA.isOpen = true; },
+    async connect() {
+      clientA.isOpen = true;
+    },
     on() {},
     off() {},
-    async incr(k: string) { const v = (store.get(k) || 0) + 1; store.set(k, v); return v; },
-    async expire() { return 1; },
-    async quit() { clientA.isOpen = false; }
+    async incr(k: string) {
+      const v = (store.get(k) || 0) + 1;
+      store.set(k, v);
+      return v;
+    },
+    async expire() {
+      return 1;
+    },
+    async quit() {
+      clientA.isOpen = false;
+    },
   };
 
   // First factory returns a client that is already open but will be closed later
@@ -147,15 +205,25 @@ test('stale/closed client is not treated as healthy', async () => {
   await redisModule.closeRedis();
 
   // Next factory returns a fresh client
-  redisModule.setCreateRedisClient(function() {
+  redisModule.setCreateRedisClient(function () {
     const c: MockRedis = {
       isOpen: false,
-      async connect() { c.isOpen = true; },
+      async connect() {
+        c.isOpen = true;
+      },
       on() {},
       off() {},
-      async incr(k: string) { const v = (store.get(k) || 0) + 1; store.set(k, v); return v; },
-      async expire() { return 1; },
-      async quit() { c.isOpen = false; }
+      async incr(k: string) {
+        const v = (store.get(k) || 0) + 1;
+        store.set(k, v);
+        return v;
+      },
+      async expire() {
+        return 1;
+      },
+      async quit() {
+        c.isOpen = false;
+      },
     };
     return c;
   });

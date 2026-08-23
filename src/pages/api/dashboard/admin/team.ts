@@ -8,8 +8,11 @@ const team = [
   { name: 'Sophie L.', role: 'Support', tasks: 6, workload: 'High' },
 ];
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
-  const auth = requireRole(req, res, ['admin', 'manager']);
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  const auth = await requireRole(req, res, ['admin', 'manager']);
   if (!auth) return;
   return jsonSuccess(res, { team }, 200);
 }

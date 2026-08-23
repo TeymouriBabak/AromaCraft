@@ -6,9 +6,15 @@ async function main() {
   const origWarn = console.warn;
   const origLog = console.log;
   const origInfo = console.info;
-  console.log = (...args: unknown[]) => { captured.push(args.map(a => String(a)).join(' ')); };
-  console.info = (...args: unknown[]) => { captured.push(args.map(a => String(a)).join(' ')); };
-  console.warn = (...args: unknown[]) => { captured.push(args.map(a => String(a)).join(' ')); };
+  console.log = (...args: unknown[]) => {
+    captured.push(args.map((a) => String(a)).join(' '));
+  };
+  console.info = (...args: unknown[]) => {
+    captured.push(args.map((a) => String(a)).join(' '));
+  };
+  console.warn = (...args: unknown[]) => {
+    captured.push(args.map((a) => String(a)).join(' '));
+  };
 
   try {
     const { checkRateLimit } = await import('../src/lib/redis');
@@ -25,4 +31,7 @@ async function main() {
   console.log('Captured logs:\n', captured.join('\n'));
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

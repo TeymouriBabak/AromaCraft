@@ -1,15 +1,15 @@
-"use client";
+'use client';
 
-import Image from "next/image";
-import Link from "next/link";
-import { motion, useReducedMotion } from "framer-motion";
-import { Star, Heart, Eye, TrendingUp, Flame } from "lucide-react";
-import { Product } from "@/data/products-multi-brand";
-import { COFFEE_BRANDS } from "@/data/coffee-brands";
-import { useState } from "react";
-import { DecisionHelper } from "./decision-helpers";
-import variants from "@/lib/motion-variants";
-import { formatCurrency } from "@/lib/currency";
+import Image from 'next/image';
+import Link from 'next/link';
+import { motion, useReducedMotion } from 'framer-motion';
+import { Star, Heart, Eye, TrendingUp, Flame } from 'lucide-react';
+import type { Product } from '@/lib/shop-products';
+import { COFFEE_BRANDS } from '@/data/coffee-brands';
+import { useState } from 'react';
+import { DecisionHelper } from './decision-helpers';
+import variants from '@/lib/motion-variants';
+import { formatCurrency } from '@/lib/currency';
 
 interface ProductCardProps {
   product: Product;
@@ -31,10 +31,12 @@ export function ProductCard({
 
   const brandInfo = COFFEE_BRANDS.find((b) => b.id === product.brand);
   const hasVariants = product.grindTypes.length > 1;
-  const isBestSeller = product.specialTags.includes("Best Seller");
-  const isNewArrival = product.specialTags.includes("New Arrival");
+  const isBestSeller = product.specialTags.includes('Best Seller');
+  const isNewArrival = product.specialTags.includes('New Arrival');
   const discountPercent = product.originalPrice
-    ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+    ? Math.round(
+        ((product.originalPrice - product.price) / product.originalPrice) * 100
+      )
     : 0;
 
   const handleWishlist = () => {
@@ -44,9 +46,9 @@ export function ProductCard({
   return (
     <motion.article
       initial={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 12 }}
-      whileInView={reduceMotion ? undefined : "visible"}
+      whileInView={reduceMotion ? undefined : 'visible'}
       viewport={{ once: true }}
-      animate={reduceMotion ? undefined : "visible"}
+      animate={reduceMotion ? undefined : 'visible'}
       variants={variants.fadeUp}
       custom={index}
       onMouseEnter={() => setIsHovered(true)}
@@ -55,7 +57,6 @@ export function ProductCard({
       whileTap={variants.cardHover.tap}
       style={{ transformOrigin: 'center' }}
       className={`group overflow-hidden rounded-[1.75rem] border border-[#d4a373]/20 bg-white/80 shadow-sm transition-all duration-300 dark:bg-[#23110c] ${isHovered ? 'glow-edge' : ''}`}
-    
     >
       {/* Image Container */}
       <div className="relative h-56 overflow-hidden bg-linear-to-br from-[#efe2d2] to-[#e0d0c0]">
@@ -104,7 +105,14 @@ export function ProductCard({
             aria-hidden
           >
             {brandInfo.logo ? (
-              <Image src={brandInfo.logo} alt="" width={20} height={20} unoptimized className="h-5 w-5 rounded-sm object-contain" />
+              <Image
+                src={brandInfo.logo}
+                alt=""
+                width={20}
+                height={20}
+                unoptimized
+                className="h-5 w-5 rounded-sm object-contain"
+              />
             ) : null}
             <span className="sr-only">Brand:</span>
             <span aria-hidden>{brandInfo.displayName}</span>
@@ -114,29 +122,45 @@ export function ProductCard({
         {/* Stock Indicator */}
         {!product.inStock && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-            <span className="text-sm font-semibold text-white">Out of Stock</span>
+            <span className="text-sm font-semibold text-white">
+              Out of Stock
+            </span>
           </div>
         )}
 
         {/* Product Image Placeholder */}
         <div className="absolute inset-0 flex items-center justify-center">
           <motion.div
-              animate={reduceMotion ? undefined : isHovered ? { scale: 1.05, rotate: 2 } : { scale: 1, rotate: 0 }}
-              transition={{ duration: 0.36 }}
-              className="h-36 w-28 rounded-[1.2rem] border border-[#8c5e3d] bg-[#1a0f0a] text-center text-[#f6e5d1] shadow-2xl overflow-hidden"
-            >
+            animate={
+              reduceMotion
+                ? undefined
+                : isHovered
+                  ? { scale: 1.05, rotate: 2 }
+                  : { scale: 1, rotate: 0 }
+            }
+            transition={{ duration: 0.36 }}
+            className="h-36 w-28 rounded-[1.2rem] border border-[#8c5e3d] bg-[#1a0f0a] text-center text-[#f6e5d1] shadow-2xl overflow-hidden"
+          >
             <div className="flex h-full flex-col items-center justify-center">
               <Flame size={24} className="mb-2 text-[#d4a373]" />
-              <div className="text-xs uppercase tracking-[0.2em]">{product.country}</div>
+              <div className="text-xs uppercase tracking-[0.2em]">
+                {product.country}
+              </div>
               <div className="mt-2 font-serif text-xs">{product.roast}</div>
             </div>
           </motion.div>
         </div>
 
         {/* Action Buttons Overlay */}
-          <motion.div
+        <motion.div
           initial={{ opacity: 0 }}
-          animate={reduceMotion ? undefined : isHovered ? { opacity: 1 } : { opacity: 0 }}
+          animate={
+            reduceMotion
+              ? undefined
+              : isHovered
+                ? { opacity: 1 }
+                : { opacity: 0 }
+          }
           transition={{ duration: 0.18 }}
           className="absolute inset-0 flex items-end justify-center gap-2 bg-linear-to-t from-black/50 to-transparent p-4"
         >
@@ -151,12 +175,14 @@ export function ProductCard({
             onClick={handleWishlist}
             className={`rounded-full p-2 transition ${
               isWishlisted
-                ? "bg-[#e76f51] text-white"
-                : "bg-white/90 text-[#1a0f0a] hover:bg-white hover:shadow-lg"
+                ? 'bg-[#e76f51] text-white'
+                : 'bg-white/90 text-[#1a0f0a] hover:bg-white hover:shadow-lg'
             }`}
-            aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+            aria-label={
+              isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'
+            }
           >
-            <Heart size={18} fill={isWishlisted ? "currentColor" : "none"} />
+            <Heart size={18} fill={isWishlisted ? 'currentColor' : 'none'} />
           </button>
         </motion.div>
       </div>
@@ -169,12 +195,18 @@ export function ProductCard({
             {brandInfo && (
               <span
                 className="text-xs font-bold uppercase tracking-[0.35em] text-white"
-                style={{ backgroundColor: brandInfo.color, padding: "2px 6px", borderRadius: "4px" }}
+                style={{
+                  backgroundColor: brandInfo.color,
+                  padding: '2px 6px',
+                  borderRadius: '4px',
+                }}
               >
                 {brandInfo.displayName}
               </span>
             )}
-            <span className="text-xs uppercase tracking-[0.35em] text-[#d4a373]">{product.coffeeType}</span>
+            <span className="text-xs uppercase tracking-[0.35em] text-[#d4a373]">
+              {product.coffeeType}
+            </span>
           </div>
           <span className="rounded-full bg-[#f9f6f0] px-2 py-1 text-xs font-medium text-[#6e4b33] dark:bg-[#1a0f0a] dark:text-[#e8d8c0]">
             {product.roast}
@@ -214,7 +246,9 @@ export function ProductCard({
               {product.rating.toFixed(1)}
             </span>
           </div>
-          <span className="text-xs text-[#9a7c6b] dark:text-[#b5988a]">({product.reviews} reviews)</span>
+          <span className="text-xs text-[#9a7c6b] dark:text-[#b5988a]">
+            ({product.reviews} reviews)
+          </span>
         </div>
 
         {/* Price & Subscription */}
@@ -229,9 +263,10 @@ export function ProductCard({
               </span>
             )}
           </div>
-            {product.subscriptionEligible && product.subscriptionSavings && (
+          {product.subscriptionEligible && product.subscriptionSavings && (
             <p className="mt-1 text-xs text-[#d4a373]">
-              Save {formatCurrency(product.subscriptionSavings)}/month with subscription
+              Save {formatCurrency(product.subscriptionSavings)}/month with
+              subscription
             </p>
           )}
         </div>
@@ -244,7 +279,11 @@ export function ProductCard({
             aria-label={hasVariants ? 'Choose options' : 'Add to cart'}
           >
             <span>{hasVariants ? 'Choose Options' : 'Add to Cart'}</span>
-            <motion.span animate={{ x: isHovered ? 8 : 0 }} transition={{ duration: 0.18 }} className="ml-2">
+            <motion.span
+              animate={{ x: isHovered ? 8 : 0 }}
+              transition={{ duration: 0.18 }}
+              className="ml-2"
+            >
               →
             </motion.span>
           </motion.div>

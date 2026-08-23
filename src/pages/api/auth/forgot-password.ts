@@ -24,9 +24,17 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
       console.info = () => {};
       console.warn = () => {};
       console.error = () => {};
-      if (typeof origDebug === 'function') (console as unknown as Record<string, unknown>).debug = () => {};
+      if (typeof origDebug === 'function')
+        (console as unknown as Record<string, unknown>).debug = () => {};
       if (process.env.NODE_ENV === 'test') {
-        return jsonSuccess(res, { message: 'If an account exists with this email, a reset link has been dispatched.' }, 200);
+        return jsonSuccess(
+          res,
+          {
+            message:
+              'If an account exists with this email, a reset link has been dispatched.',
+          },
+          200
+        );
       } else {
         generateResetToken(user.id, 60 * 15);
       }
@@ -35,10 +43,25 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
       console.info = origInfo;
       console.warn = origWarn;
       console.error = origError;
-      if (typeof origDebug === 'function') (console as unknown as Record<string, unknown>).debug = origDebug;
+      if (typeof origDebug === 'function')
+        (console as unknown as Record<string, unknown>).debug = origDebug;
     }
-    return jsonSuccess(res, { message: 'If an account exists with this email, a reset link has been dispatched.' }, 200);
+    return jsonSuccess(
+      res,
+      {
+        message:
+          'If an account exists with this email, a reset link has been dispatched.',
+      },
+      200
+    );
   }
 
-  return jsonSuccess(res, { message: 'If an account exists with this email, a reset link has been dispatched.' }, 200);
+  return jsonSuccess(
+    res,
+    {
+      message:
+        'If an account exists with this email, a reset link has been dispatched.',
+    },
+    200
+  );
 }

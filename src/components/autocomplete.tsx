@@ -1,47 +1,69 @@
-"use client";
+'use client';
 
-import { useState, useEffect, useRef, type KeyboardEvent } from "react";
-import { searchSuggestions } from "@/lib/filter-utils";
-import { products } from "@/data/products-multi-brand";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useRef, type KeyboardEvent } from 'react';
+import { searchSuggestions } from '@/lib/filter-utils';
+import type { Product } from '@/lib/shop-products';
+import { useRouter } from 'next/navigation';
 
 const categorySuggestions: Record<string, string[]> = {
-  espresso: ["Espresso", "Dark Roast", "Best Sellers"],
-  dark: ["Dark Roast", "Espresso", "Bold Flavor"],
-  light: ["Light Roast", "Single Origin", "Citrus Notes"],
-  caramel: ["Caramel", "Smooth", "House Blend"],
-  vanilla: ["Vanilla", "Medium Roast", "Subscription Eligible"],
-  berry: ["Berry", "Pour Over", "Single Origin"],
-  nutty: ["Nutty", "Blend", "Drip Coffee"],
+  espresso: ['Espresso', 'Dark Roast', 'Best Sellers'],
+  dark: ['Dark Roast', 'Espresso', 'Bold Flavor'],
+  light: ['Light Roast', 'Single Origin', 'Citrus Notes'],
+  caramel: ['Caramel', 'Smooth', 'House Blend'],
+  vanilla: ['Vanilla', 'Medium Roast', 'Subscription Eligible'],
+  berry: ['Berry', 'Pour Over', 'Single Origin'],
+  nutty: ['Nutty', 'Blend', 'Drip Coffee'],
 };
 
 function getCategorySuggestions(query: string) {
   const lower = query.toLowerCase();
-  const matched = Object.entries(categorySuggestions).find(([key]) => lower.includes(key));
+  const matched = Object.entries(categorySuggestions).find(([key]) =>
+    lower.includes(key)
+  );
   if (matched) return matched[1];
-  return ["Best Sellers", "New Arrivals", "Single Origin", "Blends", "Espresso"];
+  return [
+    'Best Sellers',
+    'New Arrivals',
+    'Single Origin',
+    'Blends',
+    'Espresso',
+  ];
 }
 
-export default function Autocomplete({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+export default function Autocomplete({
+  products,
+  value,
+  onChange,
+}: {
+  products: Product[];
+  value: string;
+  onChange: (value: string) => void;
+}) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<typeof products>([]);
   const [activeIndex, setActiveIndex] = useState<number>(-1);
   const [hasUserTyped, setHasUserTyped] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
   const router = useRouter();
-  const listboxId = "search-autocomplete-listbox";
+  const listboxId = 'search-autocomplete-listbox';
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
       if (!ref.current?.contains(e.target as Node)) setOpen(false);
     };
-    document.addEventListener("click", onDoc);
-    return () => document.removeEventListener("click", onDoc);
+    document.addEventListener('click', onDoc);
+    return () => document.removeEventListener('click', onDoc);
   }, []);
 
-  const suggestions = open && hasUserTyped && items.length === 0 ? getCategorySuggestions(value) : [];
+  const suggestions =
+    open && hasUserTyped && items.length === 0
+      ? getCategorySuggestions(value)
+      : [];
 
-  const activeDescendantId = activeIndex >= 0 && items[activeIndex] ? `search-autocomplete-item-${items[activeIndex].id}` : undefined;
+  const activeDescendantId =
+    activeIndex >= 0 && items[activeIndex]
+      ? `search-autocomplete-item-${items[activeIndex].id}`
+      : undefined;
 
   const handleInputChange = (nextValue: string) => {
     onChange(nextValue);
@@ -59,22 +81,22 @@ export default function Autocomplete({ value, onChange }: { value: string; onCha
 
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (!open) return;
-    if (event.key === "ArrowDown") {
+    if (event.key === 'ArrowDown') {
       event.preventDefault();
       setActiveIndex((prev) => Math.min(prev + 1, items.length - 1));
     }
-    if (event.key === "ArrowUp") {
+    if (event.key === 'ArrowUp') {
       event.preventDefault();
       setActiveIndex((prev) => Math.max(prev - 1, 0));
     }
-    if (event.key === "Enter") {
+    if (event.key === 'Enter') {
       event.preventDefault();
       if (activeIndex >= 0 && activeIndex < items.length) {
         router.push(`/shop/${items[activeIndex].id}`);
       }
       setOpen(false);
     }
-    if (event.key === "Escape") {
+    if (event.key === 'Escape') {
       event.preventDefault();
       setOpen(false);
     }
@@ -106,7 +128,11 @@ export default function Autocomplete({ value, onChange }: { value: string; onCha
       {open && (
         <div className="absolute left-0 right-0 z-40 mt-2 rounded-xl border border-[#e6d7c7] bg-white p-2 shadow-lg">
           {items.length > 0 ? (
-            <ul id={listboxId} role="listbox" className="max-h-60 overflow-auto">
+            <ul
+              id={listboxId}
+              role="listbox"
+              className="max-h-60 overflow-auto"
+            >
               {items.map((p, index) => (
                 <li
                   key={p.id}
@@ -114,7 +140,9 @@ export default function Autocomplete({ value, onChange }: { value: string; onCha
                   role="option"
                   aria-selected={activeIndex === index}
                   className={`cursor-pointer rounded px-3 py-2 transition ${
-                    activeIndex === index ? "bg-[#f3eadf]" : "hover:bg-[#f9f4ed]"
+                    activeIndex === index
+                      ? 'bg-[#f3eadf]'
+                      : 'hover:bg-[#f9f4ed]'
                   }`}
                   onMouseEnter={() => setActiveIndex(index)}
                   onMouseLeave={() => setActiveIndex(-1)}
@@ -126,9 +154,13 @@ export default function Autocomplete({ value, onChange }: { value: string; onCha
                   <div className="flex items-center justify-between gap-4">
                     <div>
                       <div className="font-medium text-[#1a0f0a]">{p.name}</div>
-                      <div className="text-xs text-[#6e4b33]">{p.brand} • {p.size}</div>
+                      <div className="text-xs text-[#6e4b33]">
+                        {p.brand} • {p.size}
+                      </div>
                     </div>
-                    <div className="text-sm font-semibold text-[#1a0f0a]">${p.price.toFixed(2)}</div>
+                    <div className="text-sm font-semibold text-[#1a0f0a]">
+                      ${p.price.toFixed(2)}
+                    </div>
                   </div>
                 </li>
               ))}

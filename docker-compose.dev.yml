@@ -1,11 +1,11 @@
 services:
   redis:
     image: redis:7
-    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    command: ['redis-server', '--save', '', '--appendonly', 'no']
     ports:
-      - "127.0.0.1:6399:6379"
+      - '127.0.0.1:6399:6379'
     healthcheck:
-      test: ["CMD", "redis-cli", "-h", "redis", "-p", "6379", "ping"]
+      test: ['CMD', 'redis-cli', '-h', 'redis', '-p', '6379', 'ping']
       interval: 5s
       timeout: 3s
       retries: 10
@@ -16,9 +16,15 @@ services:
       MYSQL_ROOT_PASSWORD: root_dev_password
       MYSQL_DATABASE: aromacraft
     ports:
-      - "127.0.0.1:3307:3306"
+      - '127.0.0.1:3307:3306'
     healthcheck:
-      test: ["CMD", "bash", "-c", "mysqladmin ping -h mariadb -P 3306 -uroot -proot_dev_password" ]
+      test:
+        [
+          'CMD',
+          'bash',
+          '-c',
+          'mysqladmin ping -h mariadb -P 3306 -uroot -proot_dev_password',
+        ]
       interval: 5s
       timeout: 3s
       retries: 15
@@ -26,11 +32,11 @@ services:
   mailpit:
     image: axllent/mailpit:latest
     ports:
-      - "127.0.0.1:1025:1025"
-      - "127.0.0.1:8025:8025"
+      - '127.0.0.1:1025:1025'
+      - '127.0.0.1:8025:8025'
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://mailpit:8025/api/v1/info"]
+      test: ['CMD', 'wget', '-qO-', 'http://mailpit:8025/api/v1/info']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -40,10 +46,10 @@ services:
       context: ./services/sms-mock
       dockerfile: Dockerfile
     ports:
-      - "127.0.0.1:3001:3001"
+      - '127.0.0.1:3001:3001'
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://sms-mock:3001/health"]
+      test: ['CMD', 'wget', '-qO-', 'http://sms-mock:3001/health']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -54,15 +60,15 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     ports:
-      - "127.0.0.1:3000:3000"
+      - '127.0.0.1:3000:3000'
     env_file:
       - .env
     environment:
       NODE_ENV: ${NODE_ENV:-development}
-      DATABASE_URL: "${DATABASE_URL:?DATABASE_URL must be set in .env}"
-      REDIS_URL: "redis://redis:6379"
-      DOCKER_ENVIRONMENT: "true"
-      SMS_MOCK_URL: "http://sms-mock:3001"
+      DATABASE_URL: '${DATABASE_URL:?DATABASE_URL must be set in .env}'
+      REDIS_URL: 'redis://redis:6379'
+      DOCKER_ENVIRONMENT: 'true'
+      SMS_MOCK_URL: 'http://sms-mock:3001'
       SMTP_HOST: mailpit
       SMTP_PORT: 1025
       USE_MOCKS: ${USE_MOCKS}
@@ -87,4 +93,3 @@ volumes:
     driver: local
   storage-vol:
     driver: local
-

@@ -1,10 +1,17 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 export type ApiSuccess<T> = { ok: true; data: T };
-export type ApiError = { ok: false; error: { code: string; message: string; details?: unknown } };
+export type ApiError = {
+  ok: false;
+  error: { code: string; message: string; details?: unknown };
+};
 export type ApiResponse<T> = ApiSuccess<T> | ApiError;
 
-export function jsonSuccess<T>(res: NextApiResponse, data: T, status = 200): void {
+export function jsonSuccess<T>(
+  res: NextApiResponse,
+  data: T,
+  status = 200
+): void {
   res.status(status).json({ ok: true, data });
 }
 
@@ -13,7 +20,7 @@ export function jsonError(
   code: string,
   message: string,
   status = 400,
-  details?: unknown,
+  details?: unknown
 ): void {
   res.status(status).json({ ok: false, error: { code, message, details } });
 }
@@ -23,9 +30,15 @@ export function parseJsonBody<T>(req: NextApiRequest): T | null {
   return req.body as T;
 }
 
-export function validateMethod(req: NextApiRequest, res: NextApiResponse, allowed: string[]) {
+export function validateMethod(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  allowed: string[]
+) {
   if (!allowed.includes(req.method || '')) {
-    jsonError(res, 'method_not_allowed', 'Method not allowed', 405, { allowed });
+    jsonError(res, 'method_not_allowed', 'Method not allowed', 405, {
+      allowed,
+    });
     return null;
   }
   return null;

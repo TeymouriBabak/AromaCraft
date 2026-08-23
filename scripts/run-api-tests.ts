@@ -19,16 +19,43 @@ function pickCookie(setCookie?: string[]) {
 
 async function main() {
   console.log('Test 1: Manager login (correct role)');
-  const login1 = await req('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ loginMode: 'email', role: 'manager', identifier: mgrEmail, password: mgrPass }) });
+  const login1 = await req('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      loginMode: 'email',
+      role: 'manager',
+      identifier: mgrEmail,
+      password: mgrPass,
+    }),
+  });
   const mgrCookie = pickCookie(login1.setCookie);
   console.log({ status: login1.status, cookie: mgrCookie, body: login1.body });
 
   console.log('\nTest 2: Role mismatch (expect 4xx)');
-  const login2 = await req('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ loginMode: 'email', role: 'customer', identifier: mgrEmail, password: mgrPass }) });
+  const login2 = await req('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      loginMode: 'email',
+      role: 'customer',
+      identifier: mgrEmail,
+      password: mgrPass,
+    }),
+  });
   console.log({ status: login2.status, body: login2.body });
 
   console.log('\nTest 3: Wrong password (expect 401)');
-  const login3 = await req('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ loginMode: 'email', role: 'manager', identifier: mgrEmail, password: 'WrongPass!' }) });
+  const login3 = await req('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      loginMode: 'email',
+      role: 'manager',
+      identifier: mgrEmail,
+      password: 'WrongPass!',
+    }),
+  });
   console.log({ status: login3.status, body: login3.body });
 
   console.log('\nTest 4: Manager overview without cookie (expect 401)');
@@ -36,20 +63,55 @@ async function main() {
   console.log({ status: overviewNo.status, body: overviewNo.body });
 
   console.log('\nTest 5: Manager overview with manager cookie (expect 200)');
-  const overviewMgr = await req('/api/manager/overview', { headers: mgrCookie ? { Cookie: mgrCookie } : undefined });
+  const overviewMgr = await req('/api/manager/overview', {
+    headers: mgrCookie ? { Cookie: mgrCookie } : undefined,
+  });
   console.log({ status: overviewMgr.status, body: overviewMgr.body });
 
-  console.log('\nTest 6: Signup regular user, login, and call manager overview (expect 403/401)');
+  console.log(
+    '\nTest 6: Signup regular user, login, and call manager overview (expect 403/401)'
+  );
   const rand = Math.floor(Math.random() * 1000000);
   const uemail = `testuser${rand}@aromacraft.test`;
   const username = `TestUser${rand}`;
-  const signup = await req('/api/auth/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firstName: 'Test', lastName: 'User', gender: 'other', username, mobile: '+14155552671', email: uemail, password: 'User123!', confirmPassword: 'User123!' }) });
+  const signup = await req('/api/auth/signup', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      firstName: 'Test',
+      lastName: 'User',
+      gender: 'other',
+      username,
+      mobile: '+14155552671',
+      email: uemail,
+      password: 'User123!',
+      confirmPassword: 'User123!',
+    }),
+  });
   console.log('signup', { status: signup.status, body: signup.body });
-  const loginUser = await req('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ loginMode: 'email', role: 'customer', identifier: uemail, password: 'User123!' }) });
+  const loginUser = await req('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      loginMode: 'email',
+      role: 'customer',
+      identifier: uemail,
+      password: 'User123!',
+    }),
+  });
   const userCookie = pickCookie(loginUser.setCookie);
-  console.log('login user', { status: loginUser.status, cookie: userCookie, body: loginUser.body });
-  const overviewNonMgr = await req('/api/manager/overview', { headers: userCookie ? { Cookie: userCookie } : undefined });
-  console.log('overview with non-manager', { status: overviewNonMgr.status, body: overviewNonMgr.body });
+  console.log('login user', {
+    status: loginUser.status,
+    cookie: userCookie,
+    body: loginUser.body,
+  });
+  const overviewNonMgr = await req('/api/manager/overview', {
+    headers: userCookie ? { Cookie: userCookie } : undefined,
+  });
+  console.log('overview with non-manager', {
+    status: overviewNonMgr.status,
+    body: overviewNonMgr.body,
+  });
 }
 
 main().catch((e) => {

@@ -147,7 +147,16 @@ export function isSignupFormReady(values: Partial<SignupFormValues>): boolean {
     avatarUrl: values.avatarUrl ?? '',
   };
 
-  if (!safeValues.firstName.trim() || !safeValues.lastName.trim() || !safeValues.gender.trim() || !safeValues.username.trim() || !safeValues.mobile.trim() || !safeValues.email.trim() || !safeValues.password.trim() || !safeValues.confirmPassword.trim()) {
+  if (
+    !safeValues.firstName.trim() ||
+    !safeValues.lastName.trim() ||
+    !safeValues.gender.trim() ||
+    !safeValues.username.trim() ||
+    !safeValues.mobile.trim() ||
+    !safeValues.email.trim() ||
+    !safeValues.password.trim() ||
+    !safeValues.confirmPassword.trim()
+  ) {
     return false;
   }
 

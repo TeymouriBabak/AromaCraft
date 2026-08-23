@@ -1,8 +1,20 @@
 const baseUrl = 'http://127.0.0.1:3000';
 const credentials = [
-  { role: 'customer', identifier: process.env.VERIFY_CUSTOMER_EMAIL || 'tbabak@example.com', password: process.env.VERIFY_CUSTOMER_PASSWORD || '' },
-  { role: 'admin', identifier: process.env.VERIFY_ADMIN_EMAIL || 'manager@aromacraft.test', password: process.env.VERIFY_ADMIN_PASSWORD || '' },
-  { role: 'admin', identifier: process.env.VERIFY_MANAGER_EMAIL || 'super@aromacraft.test', password: process.env.VERIFY_MANAGER_PASSWORD || '' },
+  {
+    role: 'customer',
+    identifier: process.env.VERIFY_CUSTOMER_EMAIL || 'tbabak@example.com',
+    password: process.env.VERIFY_CUSTOMER_PASSWORD || '',
+  },
+  {
+    role: 'admin',
+    identifier: process.env.VERIFY_ADMIN_EMAIL || 'manager@aromacraft.test',
+    password: process.env.VERIFY_ADMIN_PASSWORD || '',
+  },
+  {
+    role: 'admin',
+    identifier: process.env.VERIFY_MANAGER_EMAIL || 'super@aromacraft.test',
+    password: process.env.VERIFY_MANAGER_PASSWORD || '',
+  },
 ];
 
 async function login(role, identifier, password) {
@@ -11,7 +23,10 @@ async function login(role, identifier, password) {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ identifier, password }),
   });
-  const setCookie = res.headers.getSetCookie?.().join('; ') ?? res.headers.get('set-cookie') ?? '';
+  const setCookie =
+    res.headers.getSetCookie?.().join('; ') ??
+    res.headers.get('set-cookie') ??
+    '';
   return { status: res.status, setCookie };
 }
 
@@ -31,7 +46,11 @@ async function request(path, cookie) {
 const results = [];
 
 for (const entry of credentials) {
-  const { status, setCookie } = await login(entry.role, entry.identifier, entry.password);
+  const { status, setCookie } = await login(
+    entry.role,
+    entry.identifier,
+    entry.password
+  );
   if (status !== 200) {
     throw new Error(`${entry.role} login failed with ${status}`);
   }

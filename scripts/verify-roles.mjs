@@ -4,7 +4,8 @@ const prisma = new PrismaClient();
 
 (async () => {
   try {
-    const byRole = await prisma.$queryRaw`SELECT role, COUNT(*) AS cnt FROM \`User\` GROUP BY role`;
+    const byRole =
+      await prisma.$queryRaw`SELECT role, COUNT(*) AS cnt FROM \`User\` GROUP BY role`;
     console.log('roles:', JSON.stringify(byRole, null, 2));
 
     const managers = await prisma.user.findMany({

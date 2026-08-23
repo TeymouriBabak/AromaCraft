@@ -20,10 +20,16 @@ import { prisma } from '../src/lib/prisma';
       gender: 'Other',
       mobile: '+989111111111',
       countryCode: '+98',
-    }).catch((e) => { console.error('create A caught', e); return null; });
+    }).catch((e) => {
+      console.error('create A caught', e);
+      return null;
+    });
     console.log('Result A', a);
 
-    console.log('Attempting create B', { email: email.toUpperCase(), username: usernameB });
+    console.log('Attempting create B', {
+      email: email.toUpperCase(),
+      username: usernameB,
+    });
     const b = await createDbUser({
       username: usernameB,
       email: email.toUpperCase(),
@@ -34,14 +40,24 @@ import { prisma } from '../src/lib/prisma';
       gender: 'Other',
       mobile: '09111111111',
       countryCode: '+98',
-    }).catch((e) => { console.error('create B caught', e); return null; });
+    }).catch((e) => {
+      console.error('create B caught', e);
+      return null;
+    });
     console.log('Result B', b);
 
-    const found = await prisma.user.findMany({ where: { email: email.toLowerCase() } });
+    const found = await prisma.user.findMany({
+      where: { email: email.toLowerCase() },
+    });
     console.log('DB found rows for normalized email:', found.length);
     for (const row of found) {
       // eslint-disable-next-line no-console
-      console.log('ROW', { id: row.id, email: row.email, username: row.username, mobile: row.mobile });
+      console.log('ROW', {
+        id: row.id,
+        email: row.email,
+        username: row.username,
+        mobile: row.mobile,
+      });
     }
   } catch (err) {
     console.error('Unhandled error', err);

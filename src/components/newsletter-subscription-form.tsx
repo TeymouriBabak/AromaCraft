@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useNewsletterSubscription } from "@/hooks/useNewsletterSubscription";
+import { useNewsletterSubscription } from '@/hooks/useNewsletterSubscription';
 
 interface NewsletterSubscriptionFormProps {
   buttonLabel?: string;
@@ -11,13 +11,14 @@ interface NewsletterSubscriptionFormProps {
 }
 
 export function NewsletterSubscriptionForm({
-  buttonLabel = "Subscribe",
-  placeholder = "Email address",
+  buttonLabel = 'Subscribe',
+  placeholder = 'Email address',
   className,
   showDescription = true,
-  id = "newsletter-email",
+  id = 'newsletter-email',
 }: NewsletterSubscriptionFormProps) {
-  const { email, setEmail, status, message, subscribe } = useNewsletterSubscription();
+  const { email, setEmail, status, message, subscribe } =
+    useNewsletterSubscription();
 
   return (
     <div className={className}>
@@ -36,19 +37,23 @@ export function NewsletterSubscriptionForm({
         <button
           type="button"
           onClick={subscribe}
-          disabled={status === "pending"}
+          disabled={status === 'pending'}
           className="rounded-full bg-[#c9854d] px-5 py-3 font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#b56e3b] disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {status === "pending" ? "Subscribing..." : buttonLabel}
+          {status === 'pending' ? 'Subscribing...' : buttonLabel}
         </button>
       </div>
       {message ? (
-        <p className={`text-sm ${status === "error" ? "text-[#e76f51]" : "text-[#6e4b33]"}`}>
+        <p
+          className={`text-sm ${status === 'error' ? 'text-[#e76f51]' : 'text-[#6e4b33]'}`}
+        >
           {message}
         </p>
       ) : null}
       {showDescription ? (
-        <p className="mt-3 text-sm text-[#d8bda4]">No spam, just thoughtful notes and early access.</p>
+        <p className="mt-3 text-sm text-[#d8bda4]">
+          No spam, just thoughtful notes and early access.
+        </p>
       ) : null}
     </div>
   );

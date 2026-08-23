@@ -1,27 +1,26 @@
 import 'dotenv/config';
-import { config as loadEnv } from "dotenv";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { defineConfig, env } from "prisma/config";
+import { config as loadEnv } from 'dotenv';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { defineConfig, env } from 'prisma/config';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 loadEnv({
-  path: path.resolve(__dirname, ".env"),
+  path: path.resolve(__dirname, '.env'),
 });
 
 export default defineConfig({
-  schema: "prisma/schema.prisma",
+  schema: 'prisma/schema.prisma',
 
   migrations: {
-    path: "prisma/migrations",
-    seed: "npx tsx prisma/seed.ts",
+    path: 'prisma/migrations',
+    seed: 'npx tsx prisma/seed.ts',
   },
 
-
-  engine: "classic",
+  engine: 'classic',
 
   datasource: {
-    url: env("DATABASE_URL"),
+    url: env('DATABASE_URL'),
   },
 });

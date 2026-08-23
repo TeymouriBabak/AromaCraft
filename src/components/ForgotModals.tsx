@@ -21,7 +21,10 @@ export function ForgotPasswordModal({ open, onClose }: ModalProps) {
       await api.post('/api/auth/forgot-password', { email });
       setMessage('If an account exists, a reset link has been dispatched.');
     } catch (error) {
-      const normalized = handleApiError(error, 'Unexpected error. Please try again later.');
+      const normalized = handleApiError(
+        error,
+        'Unexpected error. Please try again later.'
+      );
       setMessage(normalized.message);
     }
     setLoading(false);
@@ -44,8 +47,12 @@ export function ForgotPasswordModal({ open, onClose }: ModalProps) {
         transition={{ type: 'spring', stiffness: 300, damping: 26 }}
         className="relative z-10 w-full max-w-md rounded-2xl bg-[#FBF8F3] p-6 shadow-xl"
       >
-        <h3 className="text-xl font-semibold text-[#1A120B] mb-2">Forgot Password</h3>
-        <p className="text-sm text-[#2C1D11] mb-4">Enter your account email and we&apos;ll send a password reset link.</p>
+        <h3 className="text-xl font-semibold text-[#1A120B] mb-2">
+          Forgot Password
+        </h3>
+        <p className="text-sm text-[#2C1D11] mb-4">
+          Enter your account email and we&apos;ll send a password reset link.
+        </p>
         <input
           className="w-full rounded-lg border border-[#E6E0D6] p-3 mb-3 bg-white"
           placeholder="you@domain.com"
@@ -83,7 +90,10 @@ export function ForgotUsernameModal({ open, onClose }: ModalProps) {
       await api.post('/api/auth/forgot-username', { email });
       setMessage('If an account exists, recovery instructions have been sent.');
     } catch (error) {
-      const normalized = handleApiError(error, 'Unexpected error. Please try again later.');
+      const normalized = handleApiError(
+        error,
+        'Unexpected error. Please try again later.'
+      );
       setMessage(normalized.message);
     }
     setLoading(false);
@@ -106,8 +116,12 @@ export function ForgotUsernameModal({ open, onClose }: ModalProps) {
         transition={{ type: 'spring', stiffness: 300, damping: 26 }}
         className="relative z-10 w-full max-w-md rounded-2xl bg-[#FBF8F3] p-6 shadow-xl"
       >
-        <h3 className="text-xl font-semibold text-[#1A120B] mb-2">Forgot Username</h3>
-        <p className="text-sm text-[#2C1D11] mb-4">Enter your email and we&apos;ll send your username.</p>
+        <h3 className="text-xl font-semibold text-[#1A120B] mb-2">
+          Forgot Username
+        </h3>
+        <p className="text-sm text-[#2C1D11] mb-4">
+          Enter your email and we&apos;ll send your username.
+        </p>
         <input
           className="w-full rounded-lg border border-[#E6E0D6] p-3 mb-3 bg-white"
           placeholder="you@domain.com"

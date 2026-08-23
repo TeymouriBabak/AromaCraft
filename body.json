@@ -1,1 +1,10 @@
-{"firstName":"Test","lastName":"User","gender":"other","username":"TestUser1","mobile":"09121234567","email":"ps-test-1@example.com","password":"Str0ngPass!23","confirmPassword":"Str0ngPass!23"}
+{
+  "firstName": "Test",
+  "lastName": "User",
+  "gender": "other",
+  "username": "TestUser1",
+  "mobile": "09121234567",
+  "email": "ps-test-1@example.com",
+  "password": "Str0ngPass!23",
+  "confirmPassword": "Str0ngPass!23"
+}

@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 :root {
   --background: #f7f1e8;
@@ -34,14 +34,21 @@ html {
 body {
   margin: 0;
   background:
-    radial-gradient(circle at top left, rgba(214, 176, 122, 0.12), transparent 30%),
+    radial-gradient(
+      circle at top left,
+      rgba(214, 176, 122, 0.12),
+      transparent 30%
+    ),
     var(--background);
   color: var(--foreground);
   font-family: var(--font-cardo), Georgia, serif;
   letter-spacing: -0.01em;
 }
 
-h1, h2, h3, h4 {
+h1,
+h2,
+h3,
+h4 {
   font-family: var(--font-cardo), Georgia, serif;
   font-weight: 700;
 }
@@ -51,7 +58,9 @@ h1, h2, h3, h4 {
   color: var(--foreground);
 }
 
-a, button, input {
+a,
+button,
+input {
   transition: all 180ms ease;
 }
 
@@ -61,10 +70,14 @@ a, button, input {
 }
 
 .brand-logo-card::before {
-  content: "";
+  content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.55), transparent 70%);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.55),
+    transparent 70%
+  );
   pointer-events: none;
 }
 
@@ -78,8 +91,12 @@ a, button, input {
 }
 
 @keyframes logoMarquee {
-  from { transform: translate3d(0, 0, 0); }
-  to { transform: translate3d(-50%, 0, 0); }
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -87,7 +104,9 @@ a, button, input {
     scroll-behavior: auto;
   }
 
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
@@ -97,42 +116,93 @@ a, button, input {
 
 /* Motion utilities */
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 @keyframes floaty {
-  0% { transform: translateY(0); }
- 50% { transform: translateY(-6px); }
- 100% { transform: translateY(0); }
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+  100% {
+    transform: translateY(0);
+  }
 }
 
 @keyframes slowPulse {
-  0% { box-shadow: 0 0 0 rgba(0,0,0,0); }
- 50% { box-shadow: 0 0 22px rgba(212,163,115,0.12); }
- 100% { box-shadow: 0 0 0 rgba(0,0,0,0); }
+  0% {
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  }
+  50% {
+    box-shadow: 0 0 22px rgba(212, 163, 115, 0.12);
+  }
+  100% {
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  }
 }
 
 .shimmer {
-  background-image: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.45) 50%, rgba(255,255,255,0) 100%);
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.45) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
   background-size: 200% 100%;
   animation: shimmer 1.6s linear infinite;
 }
 
-.floaty { animation: floaty 4s ease-in-out infinite; }
-.soft-pulse { animation: slowPulse 2.4s ease-in-out infinite; }
+.floaty {
+  animation: floaty 4s ease-in-out infinite;
+}
+.soft-pulse {
+  animation: slowPulse 2.4s ease-in-out infinite;
+}
 
 .glow-edge {
   box-shadow: 0 10px 32px rgba(16, 12, 10, 0.12);
-  border-image: linear-gradient(90deg, rgba(212,163,115,0.28), rgba(231,111,81,0.16)) 1;
+  border-image: linear-gradient(
+      90deg,
+      rgba(212, 163, 115, 0.28),
+      rgba(231, 111, 81, 0.16)
+    )
+    1;
 }
 
-.badge-shimmer { position: relative; overflow: hidden; }
-.badge-shimmer::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.35) 50%, rgba(255,255,255,0) 100%); background-size: 200% 100%; animation: shimmer 1.6s linear infinite; }
+.badge-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.badge-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.35) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
 
 /* Skeleton utility for components that need loading shimmer */
 .skeleton {
-  background: linear-gradient(90deg, rgba(240,236,232,1) 0%, rgba(230,225,220,1) 50%, rgba(240,236,232,1) 100%);
+  background: linear-gradient(
+    90deg,
+    rgba(240, 236, 232, 1) 0%,
+    rgba(230, 225, 220, 1) 50%,
+    rgba(240, 236, 232, 1) 100%
+  );
   background-size: 200% 100%;
   animation: shimmer 1.8s linear infinite;
   border-radius: 8px;

@@ -1,9 +1,9 @@
 /**
  * OCL (Object Constraint Language) Business Rules Enforcement
- * 
+ *
  * This module centralizes all business logic constraints that MUST be enforced
  * at the application layer, even if the database has some constraints.
- * 
+ *
  * 20 OCL Rules implemented:
  * 1. UNIQUE(mobile) across all Users
  * 2. UNIQUE(email) across all Users
@@ -33,7 +33,11 @@ import type { UserRole } from '../generated/prisma/enums';
 // OCL Rule 1-4: Identity & Role Validation
 // ============================================================================
 
-export const ALLOWED_ROLES: readonly UserRole[] = ['CUSTOMER', 'ADMIN', 'MANAGER'];
+export const ALLOWED_ROLES: readonly UserRole[] = [
+  'CUSTOMER',
+  'ADMIN',
+  'MANAGER',
+];
 export const ROLE_HIERARCHY: Record<string, number> = {
   CUSTOMER: 1,
   ADMIN: 2,
@@ -47,7 +51,10 @@ export function validateRole(role: string): role is UserRole {
 /**
  * OCL Rule 5: User must have at least one valid identity (mobile OR email)
  */
-export function validateUserIdentity(email: string | null, mobile: string | null): boolean {
+export function validateUserIdentity(
+  email: string | null,
+  mobile: string | null
+): boolean {
   const hasValidEmail = email && email.trim().length > 0;
   const hasValidMobile = mobile && mobile.trim().length > 0;
   return !!(hasValidEmail || hasValidMobile);
@@ -117,7 +124,9 @@ export function validateOtpAttempts(attemptCount: number): boolean {
 /**
  * OCL Rule 11: AuthSession.user must be non-nullable
  */
-export function validateSessionUser(userId: string | null | undefined): boolean {
+export function validateSessionUser(
+  userId: string | null | undefined
+): boolean {
   return Boolean(userId && typeof userId === 'string' && userId.length > 0);
 }
 
@@ -165,7 +174,11 @@ export function canAccessManagerSettings(userRole: UserRole): boolean {
 // OCL Rule 15-17: File Upload Validation
 // ============================================================================
 
-export const ALLOWED_AVATAR_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+export const ALLOWED_AVATAR_MIME_TYPES = [
+  'image/png',
+  'image/jpeg',
+  'image/webp',
+];
 export const MAX_AVATAR_SIZE = 5 * 1024 * 1024; // 5MB
 
 /**
@@ -185,7 +198,10 @@ export function validateAvatarSize(sizeBytes: number): boolean {
 /**
  * OCL Rule 15: Avatar.update is restricted to owner == request.user
  */
-export function canUpdateAvatar(userIdInSession: string, avatarOwnerId: string): boolean {
+export function canUpdateAvatar(
+  userIdInSession: string,
+  avatarOwnerId: string
+): boolean {
   return userIdInSession === avatarOwnerId;
 }
 
@@ -203,20 +219,30 @@ export function validateReviewRating(rating: number): boolean {
 /**
  * OCL Rule 18: Review must have a valid authorID
  */
-export function validateReviewAuthorId(authorId: string | null | undefined): boolean {
-  return Boolean(authorId && typeof authorId === 'string' && authorId.length > 0);
+export function validateReviewAuthorId(
+  authorId: string | null | undefined
+): boolean {
+  return Boolean(
+    authorId && typeof authorId === 'string' && authorId.length > 0
+  );
 }
 
 /**
  * OCL Rule 20: Review.author must match the session.user who created it
  */
-export function canCreateReview(sessionUserId: string, reviewAuthorId: string): boolean {
+export function canCreateReview(
+  sessionUserId: string,
+  reviewAuthorId: string
+): boolean {
   return sessionUserId === reviewAuthorId;
 }
 
 /**
  * OCL Rule 20: Review.author must match the session.user for deletion/update
  */
-export function canModifyReview(sessionUserId: string, reviewAuthorId: string): boolean {
+export function canModifyReview(
+  sessionUserId: string,
+  reviewAuthorId: string
+): boolean {
   return sessionUserId === reviewAuthorId;
 }

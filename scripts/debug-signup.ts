@@ -9,11 +9,24 @@ function makeMockRes() {
   let body: unknown = null;
   const headers: Record<string, string | string[] | undefined> = {};
   return {
-    status(code: number) { statusCode = code; return this; },
-    json(obj: unknown) { body = obj; return { statusCode, body }; },
-    setHeader(name: string, value: string | string[]) { headers[name] = value; return this; },
-    getHeader(name: string) { return headers[name]; },
-    _get() { return { statusCode, body, headers }; },
+    status(code: number) {
+      statusCode = code;
+      return this;
+    },
+    json(obj: unknown) {
+      body = obj;
+      return { statusCode, body };
+    },
+    setHeader(name: string, value: string | string[]) {
+      headers[name] = value;
+      return this;
+    },
+    getHeader(name: string) {
+      return headers[name];
+    },
+    _get() {
+      return { statusCode, body, headers };
+    },
   } as any;
 }
 
@@ -42,8 +55,14 @@ async function main() {
       },
     } as any;
     // compute ip the same way handler does (approx)
-    const rawIp = (req as any).headers && (req as any).headers['x-forwarded-for'];
-    const ip = typeof rawIp === 'string' ? rawIp : Array.isArray(rawIp) ? rawIp[0] : (req as any).socket?.remoteAddress || 'unknown';
+    const rawIp =
+      (req as any).headers && (req as any).headers['x-forwarded-for'];
+    const ip =
+      typeof rawIp === 'string'
+        ? rawIp
+        : Array.isArray(rawIp)
+          ? rawIp[0]
+          : (req as any).socket?.remoteAddress || 'unknown';
     console.log('Computed signup key:', `signup:${ip}`);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (handleSignup as any)(req, res);
@@ -52,4 +71,7 @@ async function main() {
   }
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

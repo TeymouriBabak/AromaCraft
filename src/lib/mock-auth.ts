@@ -1,11 +1,11 @@
 /**
  * Mock Authentication Utilities (Development Only)
- * 
+ *
  * This module provides mock auth functions for LOCAL development/testing.
  * In production, all authentication routes through db-auth.ts using real database.
- * 
+ *
  * OCL: Mock/Fixture Isolation - All mock data centralized in src/lib/fixtures/
- * 
+ *
  * DEPRECATED: Use src/lib/fixtures/mock-users.ts for fixture data
  * Keep this file for backward compatibility with existing code.
  */
@@ -26,11 +26,17 @@ export type User = MockUser;
 export const users: User[] = MOCK_USERS;
 
 export function findUserByEmail(emailOrId: string) {
-  return findFixtureMockUserByEmail(emailOrId) || findFixtureMockUserByUsername(emailOrId);
+  return (
+    findFixtureMockUserByEmail(emailOrId) ||
+    findFixtureMockUserByUsername(emailOrId)
+  );
 }
 
 export function findUserByUsername(username: string) {
-  return findFixtureMockUserByUsername(username) || findFixtureMockUserByEmail(username);
+  return (
+    findFixtureMockUserByUsername(username) ||
+    findFixtureMockUserByEmail(username)
+  );
 }
 
 export function findUserById(userId: string) {
@@ -69,5 +75,10 @@ export function clearResetToken(token: string) {
 }
 
 export function devListUsers() {
-  return users.map((u) => ({ id: u.id, username: u.username, email: u.email, role: u.role }));
+  return users.map((u) => ({
+    id: u.id,
+    username: u.username,
+    email: u.email,
+    role: u.role,
+  }));
 }

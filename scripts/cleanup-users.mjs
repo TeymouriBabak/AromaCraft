@@ -10,9 +10,11 @@ const pool = mysql.createPool({
 
 try {
   const conn = await pool.getConnection();
-  await conn.execute('DELETE FROM `User` WHERE email = ?', ['tbabak@example.com']);
+  await conn.execute('DELETE FROM `User` WHERE email = ?', [
+    'tbabak@example.com',
+  ]);
   await conn.execute('DELETE FROM `User` WHERE username = ?', ['TestUser123']);
-    await conn.execute('SELECT COUNT(*) as count FROM `User`');
+  await conn.execute('SELECT COUNT(*) as count FROM `User`');
   console.log('CLEANUP_DONE');
   conn.release();
   await pool.end();

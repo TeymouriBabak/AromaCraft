@@ -14,11 +14,21 @@ function makeMockRes() {
   let statusCode = 200;
   let body: unknown = null;
   const res = {
-    status(code: number) { statusCode = code; return this as unknown as import('next').NextApiResponse; },
-    json(obj: unknown) { body = obj; return { statusCode, body }; },
-    _get() { return { statusCode, body }; }
+    status(code: number) {
+      statusCode = code;
+      return this as unknown as import('next').NextApiResponse;
+    },
+    json(obj: unknown) {
+      body = obj;
+      return { statusCode, body };
+    },
+    _get() {
+      return { statusCode, body };
+    },
   };
-  return res as unknown as import('next').NextApiResponse & { _get(): { statusCode: number; body: unknown } };
+  return res as unknown as import('next').NextApiResponse & {
+    _get(): { statusCode: number; body: unknown };
+  };
 }
 
 test('dev latest-verification-code is inaccessible in production-like config', async () => {
@@ -31,7 +41,12 @@ test('dev latest-verification-code is inaccessible in production-like config', a
 
     const req = makeMockReq({ email: 'test@example.com' });
     const res = makeMockRes();
-    await (handler as unknown as (req: import('next').NextApiRequest, res: import('next').NextApiResponse) => Promise<void>)(req, res);
+    await (
+      handler as unknown as (
+        req: import('next').NextApiRequest,
+        res: import('next').NextApiResponse
+      ) => Promise<void>
+    )(req, res);
     const out = res._get();
     assert.equal(out.statusCode, 404);
     const body = out.body as { success: boolean; error?: { code?: string } };
@@ -40,6 +55,7 @@ test('dev latest-verification-code is inaccessible in production-like config', a
   } finally {
     const env = process.env as unknown as Record<string, string | undefined>;
     env.NODE_ENV = origNodeEnv;
-    if (origEnable === undefined) delete env.ENABLE_DEV_OTP_ENDPOINT; else env.ENABLE_DEV_OTP_ENDPOINT = origEnable;
+    if (origEnable === undefined) delete env.ENABLE_DEV_OTP_ENDPOINT;
+    else env.ENABLE_DEV_OTP_ENDPOINT = origEnable;
   }
 });

@@ -7,7 +7,9 @@ async function main() {
     throw new Error('SEED_MANAGER_EMAIL must be set in the environment');
   }
 
-  const manager = await prisma.user.findUnique({ where: { email: managerEmail } });
+  const manager = await prisma.user.findUnique({
+    where: { email: managerEmail },
+  });
   if (!manager) {
     throw new Error(`Manager user with email ${managerEmail} not found`);
   }
@@ -26,7 +28,10 @@ async function main() {
   console.log('Counts before cleanup:', before);
 
   // Find all non-manager user ids
-  const others = await prisma.user.findMany({ where: { id: { not: manager.id } }, select: { id: true } });
+  const others = await prisma.user.findMany({
+    where: { id: { not: manager.id } },
+    select: { id: true },
+  });
   const ids = others.map((u) => u.id);
 
   if (ids.length === 0) {
@@ -61,7 +66,10 @@ async function main() {
 
 main()
   .catch((err) => {
-    console.error('Cleanup error:', err instanceof Error ? err.message : String(err));
+    console.error(
+      'Cleanup error:',
+      err instanceof Error ? err.message : String(err)
+    );
     process.exit(1);
   })
   .finally(async () => {

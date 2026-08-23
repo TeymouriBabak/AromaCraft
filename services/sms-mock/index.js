@@ -7,8 +7,13 @@ let store = [];
 
 app.post('/send', (req, res) => {
   const { to, body } = req.body ?? {};
-  if (!to || !body) return res.status(400).json({ ok: false, error: 'missing to or body' });
-  const entry = { to: String(to), body: String(body), ts: new Date().toISOString() };
+  if (!to || !body)
+    return res.status(400).json({ ok: false, error: 'missing to or body' });
+  const entry = {
+    to: String(to),
+    body: String(body),
+    ts: new Date().toISOString(),
+  };
   store.unshift(entry);
   if (store.length > 200) store = store.slice(0, 200);
   return res.json({ ok: true });

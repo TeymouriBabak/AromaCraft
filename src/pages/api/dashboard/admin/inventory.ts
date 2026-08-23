@@ -9,8 +9,11 @@ const inventory = [
   { sku: 'CR-199', name: 'Velvet House Blend', stock: 22, threshold: 18 },
 ];
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
-  const auth = requireRole(req, res, ['admin', 'manager']);
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  const auth = await requireRole(req, res, ['admin', 'manager']);
   if (!auth) return;
   return jsonSuccess(res, { inventory }, 200);
 }

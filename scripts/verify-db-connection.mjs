@@ -7,7 +7,13 @@ if (!databaseUrl) {
   throw new Error('DATABASE_URL is not set in the environment.');
 }
 
-const { hostname: host, port, username: user, password, pathname } = new URL(databaseUrl);
+const {
+  hostname: host,
+  port,
+  username: user,
+  password,
+  pathname,
+} = new URL(databaseUrl);
 const database = pathname?.startsWith('/') ? pathname.slice(1) : pathname;
 const resolvedPort = Number(process.env.DB_PORT || port || 3306);
 

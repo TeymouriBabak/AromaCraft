@@ -1,8 +1,16 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { requireSession } from '@/lib/auth-utils';
-import { jsonError, jsonSuccess, parseJsonBody, validateMethod } from '@/lib/api-utils';
+import {
+  jsonError,
+  jsonSuccess,
+  parseJsonBody,
+  validateMethod,
+} from '@/lib/api-utils';
 import { prisma } from '@/lib/prisma';
-import { buildCommentTitle, normalizeCommentDestination } from '@/lib/review-utils';
+import {
+  buildCommentTitle,
+  normalizeCommentDestination,
+} from '@/lib/review-utils';
 import { createReviewSchema } from '@/lib/validators/review';
 
 const defaultReviews = [
@@ -11,7 +19,8 @@ const defaultReviews = [
     destination: 'home',
     title: 'Home',
     rating: 5,
-    content: 'A calm, confident experience from discovery to delivery. Everything feels premium and effortless.',
+    content:
+      'A calm, confident experience from discovery to delivery. Everything feels premium and effortless.',
     author: 'Amelia',
   },
   {
@@ -19,18 +28,22 @@ const defaultReviews = [
     destination: 'pike-place',
     title: 'Pike Place',
     rating: 5,
-    content: 'A luxurious daily ritual with the smoothness and consistency I want in a neighborhood coffee favorite.',
+    content:
+      'A luxurious daily ritual with the smoothness and consistency I want in a neighborhood coffee favorite.',
     author: 'Noah',
   },
 ];
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   if (req.method === 'GET') {
     try {
       const reviews = await prisma.review.findMany({
         orderBy: { createdAt: 'desc' },
         take: 30,
-        include: { user: true },
+        include: { user: { select: { id: true, name: true } } },
       });
 
       const mapped = reviews.map((review) => {
@@ -41,14 +54,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           title: buildCommentTitle(review.title),
           rating: review.rating,
           content: review.content,
-          author: review.user?.firstName || review.user?.username || 'Community member',
+          author: review.user?.name || 'Community member',
           createdAt: review.createdAt.toISOString(),
         };
       });
 
-      return jsonSuccess(res, {
-        reviews: mapped.length ? mapped : defaultReviews,
-      }, 200);
+      return jsonSuccess(
+        res,
+        {
+          reviews: mapped.length ? mapped : defaultReviews,
+        },
+        200
+      );
     } catch {
       return jsonError(res, 'reviews_error', 'Unable to load reviews.', 500);
     }
@@ -58,14 +75,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const auth = await requireSession(req, res);
     if (!auth) return;
 
-    const body = parseJsonBody<{ destination?: string; rating?: number; title?: string; content?: string }>(req);
+    const body = parseJsonBody<{
+      destination?: string;
+      rating?: number;
+      title?: string;
+      content?: string;
+    }>(req);
     if (!body) {
-      return jsonError(res, 'invalid_request', 'Review payload is required.', 400);
+      return jsonError(
+        res,
+        'invalid_request',
+        'Review payload is required.',
+        400
+      );
     }
 
     const parsed = createReviewSchema.safeParse(body);
     if (!parsed.success) {
-      return jsonError(res, 'invalid_request', 'Invalid review payload.', 400, parsed.error.flatten());
+      return jsonError(
+        res,
+        'invalid_request',
+        'Invalid review payload.',
+        400,
+        parsed.error.flatten()
+      );
     }
 
     const reviewInput = parsed.data;
@@ -84,22 +117,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           type: 'HOME',
           productId: null,
         },
-        include: { user: true },
+        include: { user: { select: { id: true, name: true } } },
       });
 
-      return jsonSuccess(res, {
-        review: {
-          id: review.id,
-          destination,
-          title: buildCommentTitle(review.title),
-          rating: review.rating,
-          content: review.content,
-          author: review.user?.firstName || review.user?.username || 'Community member',
-          createdAt: review.createdAt.toISOString(),
+      return jsonSuccess(
+        res,
+        {
+          review: {
+            id: review.id,
+            destination,
+            title: buildCommentTitle(review.title),
+            rating: review.rating,
+            content: review.content,
+            author: review.user?.name || 'Community member',
+            createdAt: review.createdAt.toISOString(),
+          },
         },
-      }, 201);
+        201
+      );
     } catch {
-      return jsonError(res, 'reviews_error', 'Unable to save your review.', 500);
+      return jsonError(
+        res,
+        'reviews_error',
+        'Unable to save your review.',
+        500
+      );
     }
   }
 

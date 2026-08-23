@@ -44,9 +44,15 @@ test('concurrent signup with same identifiers yields at most one created user', 
   const [r1, r2] = await Promise.all([p1, p2]);
 
   // Exactly one should succeed (the other should have returned null due to unique constraint)
-  const createdCount = await prisma.user.count({ where: { email: emailA.toLowerCase() } });
+  const createdCount = await prisma.user.count({
+    where: { email: emailA.toLowerCase() },
+  });
   const successCount = Number(r1 !== null) + Number(r2 !== null);
   // At most one create should succeed; database should contain exactly one normalized record
   assert.ok(successCount <= 1, 'Expected at most one create() call to succeed');
-  assert.equal(createdCount, 1, 'Expected exactly one user row for the normalized email');
+  assert.equal(
+    createdCount,
+    1,
+    'Expected exactly one user row for the normalized email'
+  );
 });

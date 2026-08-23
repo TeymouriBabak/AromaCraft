@@ -12,7 +12,10 @@ try {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   tsconfigPathsPlugin = require('vite-tsconfig-paths');
   // handle ESM default export shape
-  if (tsconfigPathsPlugin && typeof tsconfigPathsPlugin.default === 'function') {
+  if (
+    tsconfigPathsPlugin &&
+    typeof tsconfigPathsPlugin.default === 'function'
+  ) {
     tsconfigPathsPlugin = tsconfigPathsPlugin.default;
   }
 } catch {

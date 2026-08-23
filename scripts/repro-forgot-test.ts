@@ -9,11 +9,24 @@ function makeMockRes() {
   let body: unknown = null;
   const headers: Record<string, string | string[] | undefined> = {};
   return {
-    status(code: number) { statusCode = code; return this; },
-    json(obj: unknown) { body = obj; return { statusCode, body }; },
-    setHeader(name: string, value: string | string[]) { headers[name] = value; return this; },
-    getHeader(name: string) { return headers[name]; },
-    _get() { return { statusCode, body, headers }; },
+    status(code: number) {
+      statusCode = code;
+      return this;
+    },
+    json(obj: unknown) {
+      body = obj;
+      return { statusCode, body };
+    },
+    setHeader(name: string, value: string | string[]) {
+      headers[name] = value;
+      return this;
+    },
+    getHeader(name: string) {
+      return headers[name];
+    },
+    _get() {
+      return { statusCode, body, headers };
+    },
   } as any;
 }
 
@@ -26,7 +39,7 @@ async function run() {
   const originalInfo = console.info;
   const captured: string[] = [];
   const capture = (...args: unknown[]) => {
-    captured.push(args.map(a => String(a)).join(' '));
+    captured.push(args.map((a) => String(a)).join(' '));
   };
   try {
     console.log = capture;
@@ -36,9 +49,16 @@ async function run() {
     const rl = await checkRateLimit('fail-closed:test', 1, 60);
     console.log('checkRateLimit returned:', rl);
     try {
-      assert.strictEqual(rl, false, `Expected checkRateLimit(...) to be false but got ${String(rl)}`);
+      assert.strictEqual(
+        rl,
+        false,
+        `Expected checkRateLimit(...) to be false but got ${String(rl)}`
+      );
     } catch (e) {
-      console.error('Rate limit assertion failed:', e instanceof Error ? e.message : String(e));
+      console.error(
+        'Rate limit assertion failed:',
+        e instanceof Error ? e.message : String(e)
+      );
     }
 
     await (forgotPassword as any)(req, res);
@@ -52,16 +72,29 @@ async function run() {
 
     // Assertions from test
     const failures: string[] = [];
-    if (body.ok !== true) failures.push(`body.ok expected true but was ${String(body.ok)}`);
-    if (typeof message !== 'string') failures.push(`message expected string but was ${typeof message}`);
-    if (message.includes(email)) failures.push(`message includes email (${email})`);
+    if (body.ok !== true)
+      failures.push(`body.ok expected true but was ${String(body.ok)}`);
+    if (typeof message !== 'string')
+      failures.push(`message expected string but was ${typeof message}`);
+    if (message.includes(email))
+      failures.push(`message includes email (${email})`);
     if (/token/i.test(message)) failures.push(`message includes 'token'`);
-    if (/reset[-_ ]?link|\/reset|\?.*token=|token=|expires|expiry/i.test(message)) failures.push('message includes reset-link or token query');
+    if (
+      /reset[-_ ]?link|\/reset|\?.*token=|token=|expires|expiry/i.test(message)
+    )
+      failures.push('message includes reset-link or token query');
 
     const consoleText = captured.join(' ');
-    if (consoleText.includes(email)) failures.push(`console output includes email (${email})`);
-    if (/token/i.test(consoleText)) failures.push(`console output includes 'token'`);
-    if (/reset[-_ ]?link|\/reset|\?.*token=|token=|expires|expiry/i.test(consoleText)) failures.push('console output includes reset-link or token query');
+    if (consoleText.includes(email))
+      failures.push(`console output includes email (${email})`);
+    if (/token/i.test(consoleText))
+      failures.push(`console output includes 'token'`);
+    if (
+      /reset[-_ ]?link|\/reset|\?.*token=|token=|expires|expiry/i.test(
+        consoleText
+      )
+    )
+      failures.push('console output includes reset-link or token query');
 
     console.log('\nCaptured console lines:\n', consoleText || '<none>');
     if (failures.length) {
@@ -76,4 +109,7 @@ async function run() {
   }
 }
 
-run().catch((e) => { console.error('run error', e); process.exit(1); });
+run().catch((e) => {
+  console.error('run error', e);
+  process.exit(1);
+});

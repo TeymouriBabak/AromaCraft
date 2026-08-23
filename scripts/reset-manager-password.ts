@@ -18,7 +18,9 @@ async function main() {
     data: { passwordHash },
   });
 
-  console.log(`Password reset OK -> email: ${manager.email} | username: ${manager.username}`);
+  console.log(
+    `Password reset OK -> email: ${manager.email} | username: ${manager.username}`
+  );
 }
 
 main()

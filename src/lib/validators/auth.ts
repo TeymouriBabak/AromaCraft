@@ -14,7 +14,9 @@ export const loginSchema = z.object({
     errorMap: () => ({ message: 'Login mode must be "email" or "username"' }),
   }),
   role: z.enum(['customer', 'admin', 'manager'], {
-    errorMap: () => ({ message: 'Role must be "customer", "admin", or "manager"' }),
+    errorMap: () => ({
+      message: 'Role must be "customer", "admin", or "manager"',
+    }),
   }),
   identifier: z
     .string()
@@ -55,7 +57,10 @@ export const signupSchema = z
       .trim()
       .min(4, 'Username must be at least 4 characters.')
       .max(120, 'Username must not exceed 120 characters.')
-      .regex(/^[a-zA-Z0-9_-]+$/, 'Username can only contain letters, numbers, underscores, and hyphens.')
+      .regex(
+        /^[a-zA-Z0-9_-]+$/,
+        'Username can only contain letters, numbers, underscores, and hyphens.'
+      )
       .regex(/(?=.*[A-Z])/, 'Username needs at least one uppercase letter.')
       .regex(/(?=.*[a-z])/, 'Username needs at least one lowercase letter.')
       .regex(/(?=.*\d)/, 'Username needs at least one digit.'),
@@ -160,4 +165,24 @@ export const resendVerificationSchema = z.object({
   email: z.string().trim().email('Valid email is required.'),
 });
 
-export type ResendVerificationPayload = z.infer<typeof resendVerificationSchema>;
+export type ResendVerificationPayload = z.infer<
+  typeof resendVerificationSchema
+>;
+
+/**
+ * Step 2 of two-step login: OTP sent via SMS after password check
+ */
+export const verifyLoginSchema = z.object({
+  identifier: z
+    .string()
+    .trim()
+    .min(1, 'Email or username is required.')
+    .max(255, 'Email or username is too long.'),
+  otp: z
+    .string()
+    .trim()
+    .length(6, 'OTP must be exactly 6 digits.')
+    .regex(/^\d{6}$/, 'OTP must contain only digits.'),
+});
+
+export type VerifyLoginPayload = z.infer<typeof verifyLoginSchema>;

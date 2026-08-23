@@ -10,7 +10,9 @@ const rootPool = mysql.createPool({
 try {
   const conn = await rootPool.getConnection();
   await conn.execute('DROP DATABASE IF EXISTS aromacraft');
-  await conn.execute('CREATE DATABASE aromacraft CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci');
+  await conn.execute(
+    'CREATE DATABASE aromacraft CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci'
+  );
   console.log('DATABASE_RESET_SUCCESS');
   conn.release();
   await rootPool.end();

@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect, useState } from 'react';
 import api from '@/lib/api-client';
@@ -8,7 +8,12 @@ type ApiOrderItem = {
   productId: string;
   quantity: number;
   unitPrice?: number | string;
-  product?: { id?: string; name?: string; imageUrl?: string; slug?: string } | null;
+  product?: {
+    id?: string;
+    name?: string;
+    imageUrl?: string;
+    slug?: string;
+  } | null;
   name?: string;
   price?: number | string;
   size?: string;
@@ -19,7 +24,14 @@ export type Order = {
   id: string;
   createdAt: string;
   total: number;
-  items: Array<{ productId: string; quantity: number; name: string; price: number; size?: string; grindType?: string }>;
+  items: Array<{
+    productId: string;
+    quantity: number;
+    name: string;
+    price: number;
+    size?: string;
+    grindType?: string;
+  }>;
 };
 
 type CustomerOrdersResponse = {
@@ -45,7 +57,10 @@ export function useCustomerOrders() {
         if (!mounted) return;
         const nextOrders = (data.orders ?? []).map((order) => ({
           id: order.id,
-          createdAt: order.createdAt instanceof Date ? order.createdAt.toISOString() : String(order.createdAt),
+          createdAt:
+            order.createdAt instanceof Date
+              ? order.createdAt.toISOString()
+              : String(order.createdAt),
           total: Number(order.total ?? 0),
           items: (order.items ?? []).map((item) => ({
             productId: item.productId,

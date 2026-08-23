@@ -14,11 +14,20 @@ async function main() {
   });
   console.log('SESSION_RESULT', session);
   if (session) {
-    const fetched = await getSessionByCookieValue(session.token).catch((error) => {
-      console.error('FETCH_SESSION_ERROR', error);
-      return null;
-    });
-    console.log('FETCHED_SESSION', fetched && { id: fetched.session.id, userId: fetched.session.userId, tokenHash: fetched.session.tokenHash });
+    const fetched = await getSessionByCookieValue(session.token).catch(
+      (error) => {
+        console.error('FETCH_SESSION_ERROR', error);
+        return null;
+      }
+    );
+    console.log(
+      'FETCHED_SESSION',
+      fetched && {
+        id: fetched.session.id,
+        userId: fetched.session.userId,
+        tokenHash: fetched.session.tokenHash,
+      }
+    );
   }
 }
 

@@ -6,17 +6,26 @@
 
 const BASE = 'http://localhost:3001';
 
-async function get(path, headers = {}){
-  const res = await fetch(BASE + path, { method: 'GET', headers, redirect: 'manual' });
+async function get(path, headers = {}) {
+  const res = await fetch(BASE + path, {
+    method: 'GET',
+    headers,
+    redirect: 'manual',
+  });
   return res;
 }
 
-async function post(path, body, headers = {}){
-  const res = await fetch(BASE + path, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(body), redirect: 'manual' });
+async function post(path, body, headers = {}) {
+  const res = await fetch(BASE + path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...headers },
+    body: JSON.stringify(body),
+    redirect: 'manual',
+  });
   return res;
 }
 
-(async ()=>{
+(async () => {
   console.log('1) Anonymous GET /');
   let r = await get('/');
   console.log('status', r.status);
@@ -30,7 +39,10 @@ async function post(path, body, headers = {}){
   console.log('status', r.status, 'location', r.headers.get('location'));
 
   console.log('\n4) Login as seeded user via POST /api/auth/login');
-  r = await post('/api/auth/login', { identifier: process.env.E2E_CUSTOMER_EMAIL || 'tbabak@example.com', password: process.env.E2E_CUSTOMER_PASSWORD || '' });
+  r = await post('/api/auth/login', {
+    identifier: process.env.E2E_CUSTOMER_EMAIL || 'tbabak@example.com',
+    password: process.env.E2E_CUSTOMER_PASSWORD || '',
+  });
   console.log('status', r.status);
   // Collect Set-Cookie(s) robustly: Node's global fetch may expose only a single
   // header via `get('set-cookie')`. We defensively parse that value and extract
@@ -38,10 +50,16 @@ async function post(path, body, headers = {}){
   const setCookieRaw = r.headers.get('set-cookie') || '';
   console.log('set-cookie', setCookieRaw);
   // extract cookie name=value pairs present in the header string
-  const cookiePairs = setCookieRaw.split(',').map(part => part.trim()).flatMap(seg => seg.split(';')[0]).filter(Boolean);
+  const cookiePairs = setCookieRaw
+    .split(',')
+    .map((part) => part.trim())
+    .flatMap((seg) => seg.split(';')[0])
+    .filter(Boolean);
   // prefer explicit names if present
-  const sessionPair = cookiePairs.find(p => p.startsWith('aromacraft_sid='));
-  const routeHintPair = cookiePairs.find(p => p.startsWith('aromacraft_route_hint='));
+  const sessionPair = cookiePairs.find((p) => p.startsWith('aromacraft_sid='));
+  const routeHintPair = cookiePairs.find((p) =>
+    p.startsWith('aromacraft_route_hint=')
+  );
   const cookieHeader = [sessionPair, routeHintPair].filter(Boolean).join('; ');
 
   console.log('\n5) Access /dashboard with session cookie (expect 200)');
@@ -53,14 +71,31 @@ async function post(path, body, headers = {}){
   console.log('status', r.status);
 
   console.log('\n7) POST /api/orders/create without auth (expect 401)');
-  r = await post('/api/orders/create', { fullName: 'Test User', email: 'a@b.com', address: 'x', items: [{ productId: 1, name: 'Test', price: 10, quantity: 1 }] });
-  console.log('status', r.status); 
+  r = await post('/api/orders/create', {
+    fullName: 'Test User',
+    email: 'a@b.com',
+    address: 'x',
+    items: [{ productId: 1, name: 'Test', price: 10, quantity: 1 }],
+  });
+  console.log('status', r.status);
 
   console.log('\n8) POST /api/orders/create with auth (expect 201)');
-  r = await post('/api/orders/create', { fullName: 'Test User', email: 'a@b.com', address: 'x', items: [{ productId: 1, name: 'Test', price: 10, quantity: 1 }] }, { Cookie: cookieHeader });
+  r = await post(
+    '/api/orders/create',
+    {
+      fullName: 'Test User',
+      email: 'a@b.com',
+      address: 'x',
+      items: [{ productId: 1, name: 'Test', price: 10, quantity: 1 }],
+    },
+    { Cookie: cookieHeader }
+  );
   console.log('status', r.status);
-  if (r.headers.get('content-type') && r.headers.get('content-type').includes('application/json')){
-    const json = await r.json().catch(()=>null);
+  if (
+    r.headers.get('content-type') &&
+    r.headers.get('content-type').includes('application/json')
+  ) {
+    const json = await r.json().catch(() => null);
     console.log('body', json);
   }
 

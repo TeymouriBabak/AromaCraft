@@ -8,11 +8,24 @@ function makeMockRes() {
   let body: unknown = null;
   const headers: Record<string, string | string[] | undefined> = {};
   return {
-    status(code: number) { statusCode = code; return this; },
-    json(obj: unknown) { body = obj; return { statusCode, body }; },
-    setHeader(name: string, value: string | string[]) { headers[name] = value; return this; },
-    getHeader(name: string) { return headers[name]; },
-    _get() { return { statusCode, body, headers }; },
+    status(code: number) {
+      statusCode = code;
+      return this;
+    },
+    json(obj: unknown) {
+      body = obj;
+      return { statusCode, body };
+    },
+    setHeader(name: string, value: string | string[]) {
+      headers[name] = value;
+      return this;
+    },
+    getHeader(name: string) {
+      return headers[name];
+    },
+    _get() {
+      return { statusCode, body, headers };
+    },
   } as any;
 }
 
@@ -24,8 +37,12 @@ async function main() {
   const captured: string[] = [];
   const origLog = console.log;
   const origInfo = console.info;
-  console.log = (...args: unknown[]) => { captured.push(args.map(a => String(a)).join(' ')); };
-  console.info = (...args: unknown[]) => { captured.push(args.map(a => String(a)).join(' ')); };
+  console.log = (...args: unknown[]) => {
+    captured.push(args.map((a) => String(a)).join(' '));
+  };
+  console.info = (...args: unknown[]) => {
+    captured.push(args.map((a) => String(a)).join(' '));
+  };
 
   try {
     await (forgotPassword as any)(req, res);
@@ -40,4 +57,7 @@ async function main() {
   console.log('Response:', res._get());
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

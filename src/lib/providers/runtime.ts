@@ -6,8 +6,12 @@ import { smsConsoleProvider } from './implementations/smsConsole';
 
 export function initProviders() {
   // Choose providers based on environment variables or NODE_ENV
-  const emailProvider = process.env.EMAIL_PROVIDER ?? (process.env.NODE_ENV === 'production' ? undefined : 'console');
-  const smsProvider = process.env.SMS_PROVIDER ?? (process.env.NODE_ENV === 'production' ? undefined : 'console');
+  const emailProvider =
+    process.env.EMAIL_PROVIDER ??
+    (process.env.NODE_ENV === 'production' ? undefined : 'console');
+  const smsProvider =
+    process.env.SMS_PROVIDER ??
+    (process.env.NODE_ENV === 'production' ? undefined : 'console');
 
   switch (emailProvider) {
     case 'console':

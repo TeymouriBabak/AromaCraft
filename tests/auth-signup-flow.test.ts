@@ -55,7 +55,10 @@ test('invalid phone numbers are rejected with a field-level validation error', (
   });
 
   assert.equal(result.success, false);
-  assert.equal(result.error.issues.some((issue) => issue.path.includes('mobile')), true);
+  assert.equal(
+    result.error.issues.some((issue) => issue.path.includes('mobile')),
+    true
+  );
 });
 
 test('valid phone numbers use the same client and server normalization rules', () => {
@@ -64,16 +67,19 @@ test('valid phone numbers use the same client and server normalization rules', (
 
   assert.equal(normalized, '+14155550188');
   assert.equal(isPhoneNumberValid(value), true);
-  assert.equal(signupSchema.safeParse({
-    firstName: 'Ava',
-    lastName: 'Morgan',
-    gender: 'Female',
-    username: 'AvaM0rgan',
-    mobile: value,
-    email: 'ava@example.com',
-    password: 'Coffee!2024',
-    confirmPassword: 'Coffee!2024',
-  }).success, true);
+  assert.equal(
+    signupSchema.safeParse({
+      firstName: 'Ava',
+      lastName: 'Morgan',
+      gender: 'Female',
+      username: 'AvaM0rgan',
+      mobile: value,
+      email: 'ava@example.com',
+      password: 'Coffee!2024',
+      confirmPassword: 'Coffee!2024',
+    }).success,
+    true
+  );
 });
 
 test('login and signup schemas remain independent', () => {

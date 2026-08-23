@@ -8,11 +8,24 @@ function makeMockRes() {
   let body: unknown = null;
   const headers: Record<string, string | string[] | undefined> = {};
   return {
-    status(code: number) { statusCode = code; return this; },
-    json(obj: unknown) { body = obj; return { statusCode, body }; },
-    setHeader(name: string, value: string | string[]) { headers[name] = value; return this; },
-    getHeader(name: string) { return headers[name]; },
-    _get() { return { statusCode, body, headers }; },
+    status(code: number) {
+      statusCode = code;
+      return this;
+    },
+    json(obj: unknown) {
+      body = obj;
+      return { statusCode, body };
+    },
+    setHeader(name: string, value: string | string[]) {
+      headers[name] = value;
+      return this;
+    },
+    getHeader(name: string) {
+      return headers[name];
+    },
+    _get() {
+      return { statusCode, body, headers };
+    },
   } as any;
 }
 
@@ -30,11 +43,25 @@ async function run() {
     debug: (console as any).debug,
   };
 
-  console.log = (...args: unknown[]) => { calls.push({ method: 'log', text: args.map(a => String(a)).join(' ') }); };
-  console.info = (...args: unknown[]) => { calls.push({ method: 'info', text: args.map(a => String(a)).join(' ') }); };
-  console.warn = (...args: unknown[]) => { calls.push({ method: 'warn', text: args.map(a => String(a)).join(' ') }); };
-  console.error = (...args: unknown[]) => { calls.push({ method: 'error', text: args.map(a => String(a)).join(' ') }); };
-  if (typeof orig.debug === 'function') (console as any).debug = (...args: unknown[]) => { calls.push({ method: 'debug', text: args.map(a => String(a)).join(' ') }); };
+  console.log = (...args: unknown[]) => {
+    calls.push({ method: 'log', text: args.map((a) => String(a)).join(' ') });
+  };
+  console.info = (...args: unknown[]) => {
+    calls.push({ method: 'info', text: args.map((a) => String(a)).join(' ') });
+  };
+  console.warn = (...args: unknown[]) => {
+    calls.push({ method: 'warn', text: args.map((a) => String(a)).join(' ') });
+  };
+  console.error = (...args: unknown[]) => {
+    calls.push({ method: 'error', text: args.map((a) => String(a)).join(' ') });
+  };
+  if (typeof orig.debug === 'function')
+    (console as any).debug = (...args: unknown[]) => {
+      calls.push({
+        method: 'debug',
+        text: args.map((a) => String(a)).join(' '),
+      });
+    };
 
   try {
     await (forgotPassword as any)(req, res);
@@ -52,4 +79,7 @@ async function run() {
   }
 }
 
-run().catch(e => { console.error(e); process.exit(1); });
+run().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

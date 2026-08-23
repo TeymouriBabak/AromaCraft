@@ -1,0 +1,9 @@
+node_modules
+.next
+src/generated
+public
+.codeatlas
+.eslint-report.json
+body.json
+payload.json
+package-lock.json

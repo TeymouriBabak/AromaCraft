@@ -1,9 +1,21 @@
-import { products } from "@/data/products-multi-brand";
-import ProductDetailClient from "./ProductDetailClient";
+import { notFound } from 'next/navigation';
+import ProductDetailClient from './ProductDetailClient';
+import { getShopProduct } from '@/lib/shop-products';
 
-export default function ProductDetailPage({ params }: { params: { id: string } }) {
-  const productId = Number(params.id);
-  const product = products.find((item) => item.id === productId) ?? products[0];
+export const dynamic = 'force-dynamic';
+
+export default async function ProductDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const productId = Number(id);
+  const product = Number.isInteger(productId)
+    ? await getShopProduct(productId)
+    : null;
+
+  if (!product) notFound();
 
   return <ProductDetailClient product={product} />;
 }

@@ -11,7 +11,11 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import handler from '../src/pages/api/auth/upload-avatar';
 import { getStorageProvider } from '../src/lib/providers/factory';
 import { localStorageProvider } from '../src/lib/providers/implementations/storageLocal';
-import { createDbSession, createDbUser, findUserByEmail } from '../src/lib/db-auth';
+import {
+  createDbSession,
+  createDbUser,
+  findUserByEmail,
+} from '../src/lib/db-auth';
 
 interface MockRes {
   status(code: number): MockRes;
@@ -37,7 +41,12 @@ function makeMockRes(): MockRes {
   } as MockRes;
 }
 
-function makeMultipartReq(file: Buffer, mimeType: string, filename: string, fieldName = 'avatar') {
+function makeMultipartReq(
+  file: Buffer,
+  mimeType: string,
+  filename: string,
+  fieldName = 'avatar'
+) {
   const boundary = '----test-boundary';
   const body = [
     `--${boundary}`,
@@ -196,7 +205,10 @@ test('oversized avatar is rejected with 400', async () => {
 });
 
 test('client code no longer uses readAsDataURL or imageDataUrl for avatar upload', () => {
-  const source = readFileSync(join(process.cwd(), 'src/components/secure-auth-form.tsx'), 'utf8');
+  const source = readFileSync(
+    join(process.cwd(), 'src/components/secure-auth-form.tsx'),
+    'utf8'
+  );
   assert.equal(source.includes('readAsDataURL'), false);
   assert.equal(source.includes('imageDataUrl'), false);
   assert.equal(source.includes('data:image'), false);
@@ -209,7 +221,11 @@ test('canonical storage provider resolves to local_files implementation', () => 
 
 test('safe relative paths are preserved under /uploads with subdirectories', async () => {
   const filePath = 'avatars/test.png';
-  const result = await localStorageProvider.saveFile(filePath, Buffer.from('ok'), 'image/png');
+  const result = await localStorageProvider.saveFile(
+    filePath,
+    Buffer.from('ok'),
+    'image/png'
+  );
   assert.equal(result, '/uploads/avatars/test.png');
   const absolutePath = join(process.cwd(), 'public/uploads/avatars/test.png');
   assert.equal(existsSync(absolutePath), true);
@@ -218,12 +234,24 @@ test('safe relative paths are preserved under /uploads with subdirectories', asy
 
 test('traversal and absolute storage paths are rejected', async () => {
   await assert.rejects(async () => {
-    await localStorageProvider.saveFile('../escape.png', Buffer.from('nope'), 'image/png');
+    await localStorageProvider.saveFile(
+      '../escape.png',
+      Buffer.from('nope'),
+      'image/png'
+    );
   });
   await assert.rejects(async () => {
-    await localStorageProvider.saveFile('../../escape.png', Buffer.from('nope'), 'image/png');
+    await localStorageProvider.saveFile(
+      '../../escape.png',
+      Buffer.from('nope'),
+      'image/png'
+    );
   });
   await assert.rejects(async () => {
-    await localStorageProvider.saveFile('/tmp/escape.png', Buffer.from('nope'), 'image/png');
+    await localStorageProvider.saveFile(
+      '/tmp/escape.png',
+      Buffer.from('nope'),
+      'image/png'
+    );
   });
 });

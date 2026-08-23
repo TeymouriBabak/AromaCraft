@@ -10,7 +10,9 @@ const pool = mysql.createPool({
 
 try {
   const conn = await pool.getConnection();
-  const [result] = await conn.execute('DELETE FROM user WHERE email = ?', ['tbabak@example.com']);
+  const [result] = await conn.execute('DELETE FROM user WHERE email = ?', [
+    'tbabak@example.com',
+  ]);
   console.log('DELETED_ROWS:', result.affectedRows);
   conn.release();
   await pool.end();

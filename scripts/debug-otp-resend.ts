@@ -6,18 +6,35 @@ import assert from 'node:assert/strict';
 import { prisma } from '../src/lib/prisma';
 import { createDbUser } from '../src/lib/db-auth';
 import { hashOtp } from '../src/lib/auth/otp';
-import { handleResendVerification, handleVerifyAccount, getLatestMockVerificationOtp } from '../src/lib/auth-utils';
+import {
+  handleResendVerification,
+  handleVerifyAccount,
+  getLatestMockVerificationOtp,
+} from '../src/lib/auth-utils';
 
 function makeMockRes() {
   let statusCode = 200;
   let body: unknown = null;
   const headers: Record<string, string | string[] | undefined> = {};
   return {
-    status(code: number) { statusCode = code; return this; },
-    json(obj: unknown) { body = obj; return { statusCode, body }; },
-    setHeader(name: string, value: string | string[]) { headers[name] = value; return this; },
-    getHeader(name: string) { return headers[name]; },
-    _get() { return { statusCode, body, headers }; },
+    status(code: number) {
+      statusCode = code;
+      return this;
+    },
+    json(obj: unknown) {
+      body = obj;
+      return { statusCode, body };
+    },
+    setHeader(name: string, value: string | string[]) {
+      headers[name] = value;
+      return this;
+    },
+    getHeader(name: string) {
+      return headers[name];
+    },
+    _get() {
+      return { statusCode, body, headers };
+    },
   } as any;
 }
 
@@ -59,31 +76,75 @@ async function run() {
   // Call resend
   const resendRes = makeMockRes();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (handleResendVerification as any)({ method: 'POST', body: { email } }, resendRes);
+  await (handleResendVerification as any)(
+    { method: 'POST', body: { email } },
+    resendRes
+  );
   console.log('resend status', resendRes._get().statusCode);
 
   const latestCode = getLatestMockVerificationOtp(email, 'EMAIL_VERIFICATION');
   console.log('latestCode (mock store) =', latestCode);
 
   // Check DB rows for tokens
-  const rows = await prisma.verificationToken.findMany({ where: { userId: user.id } , orderBy: { createdAt: 'desc' } });
-  console.log('DB verification rows:', rows.map(r => ({ id: r.id, token: r.token, usedAt: r.usedAt, expiresAt: r.expiresAt })));
+  const rows = await prisma.verificationToken.findMany({
+    where: { userId: user.id },
+    orderBy: { createdAt: 'desc' },
+  });
+  console.log(
+    'DB verification rows:',
+    rows.map((r) => ({
+      id: r.id,
+      token: r.token,
+      usedAt: r.usedAt,
+      expiresAt: r.expiresAt,
+    }))
+  );
 
   // Try old code
   const oldAttemptRes = makeMockRes();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (handleVerifyAccount as any)({ method: 'POST', body: { email, code: firstCode } }, oldAttemptRes);
-  console.log('old code verify status', oldAttemptRes._get().statusCode, 'body', oldAttemptRes._get().body);
+  await (handleVerifyAccount as any)(
+    { method: 'POST', body: { email, code: firstCode } },
+    oldAttemptRes
+  );
+  console.log(
+    'old code verify status',
+    oldAttemptRes._get().statusCode,
+    'body',
+    oldAttemptRes._get().body
+  );
 
   // Try latest code
   const latestAttemptRes = makeMockRes();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (handleVerifyAccount as any)({ method: 'POST', body: { email, code: latestCode } }, latestAttemptRes);
-  console.log('latest code verify status', latestAttemptRes._get().statusCode, 'body', latestAttemptRes._get().body);
+  await (handleVerifyAccount as any)(
+    { method: 'POST', body: { email, code: latestCode } },
+    latestAttemptRes
+  );
+  console.log(
+    'latest code verify status',
+    latestAttemptRes._get().statusCode,
+    'body',
+    latestAttemptRes._get().body
+  );
 
   // Inspect token rows again
-  const rowsAfter = await prisma.verificationToken.findMany({ where: { userId: user.id } , orderBy: { createdAt: 'desc' } });
-  console.log('DB verification rows after verify attempts:', rowsAfter.map(r => ({ id: r.id, token: r.token, usedAt: r.usedAt, expiresAt: r.expiresAt })));
+  const rowsAfter = await prisma.verificationToken.findMany({
+    where: { userId: user.id },
+    orderBy: { createdAt: 'desc' },
+  });
+  console.log(
+    'DB verification rows after verify attempts:',
+    rowsAfter.map((r) => ({
+      id: r.id,
+      token: r.token,
+      usedAt: r.usedAt,
+      expiresAt: r.expiresAt,
+    }))
+  );
 }
 
-run().catch(e => { console.error(e); process.exit(1); });
+run().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

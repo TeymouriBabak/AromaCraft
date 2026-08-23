@@ -1,11 +1,11 @@
-import nodemailer from 'nodemailer'
-import { EmailProvider } from '../emailProvider'
+import nodemailer from 'nodemailer';
+import { EmailProvider } from '../emailProvider';
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'mailpit',
   port: Number(process.env.SMTP_PORT || 1025),
   secure: false,
-})
+});
 
 export const mailpitProvider: EmailProvider = {
   sendEmail: async (to, subject, html, text) => {
@@ -15,6 +15,6 @@ export const mailpitProvider: EmailProvider = {
       subject,
       html,
       text,
-    })
+    });
   },
-}
+};

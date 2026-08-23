@@ -86,7 +86,9 @@ export async function findUserByEmail(email: string) {
 
 export async function findUserByUsername(username: string) {
   const normalized = normalizeIdentifier(username);
-  const user = await prisma.user.findUnique({ where: { username: normalized } });
+  const user = await prisma.user.findUnique({
+    where: { username: normalized },
+  });
   return user ? mapUser(user) : null;
 }
 
@@ -99,7 +101,9 @@ export async function findUserByMobile(mobileRaw?: string | null) {
   if (!mobileRaw) return null;
   const normalized = normalizePhoneNumber(String(mobileRaw));
   if (!normalized) return null;
-  const user = await prisma.user.findFirst({ where: { mobile: normalized } }).catch(() => null);
+  const user = await prisma.user
+    .findFirst({ where: { mobile: normalized } })
+    .catch(() => null);
   return user ? mapUser(user) : null;
 }
 
@@ -119,12 +123,16 @@ export async function createDbUser(userData: {
   const passwordHash = await hash(userData.password, 12);
   const normalizedEmail = normalizeIdentifier(userData.email);
   const normalizedUsername = normalizeIdentifier(userData.username);
-  const roleValue = userData.role ? (userData.role.toUpperCase() as UserRole) : 'CUSTOMER';
-  const normalizedMobile = userData.mobile ? normalizePhoneNumber(userData.mobile) : null;
+  const roleValue = userData.role
+    ? (userData.role.toUpperCase() as UserRole)
+    : 'CUSTOMER';
+  const normalizedMobile = userData.mobile
+    ? normalizePhoneNumber(userData.mobile)
+    : null;
 
   try {
     const created = await prisma.user.create({
-        data: {
+      data: {
         username: normalizedUsername,
         email: normalizedEmail,
         passwordHash,
@@ -133,7 +141,7 @@ export async function createDbUser(userData: {
         firstName: userData.firstName,
         lastName: userData.lastName,
         gender: userData.gender,
-          mobile: normalizedMobile,
+        mobile: normalizedMobile,
         countryCode: userData.countryCode,
         avatarUrl: userData.avatarUrl,
         emailVerified: null,
@@ -149,14 +157,14 @@ export async function createDbUser(userData: {
   }
 }
 
-export async function authenticateCredentials(identifier: string, password: string) {
+export async function authenticateCredentials(
+  identifier: string,
+  password: string
+) {
   const normalized = normalizeIdentifier(identifier);
   const user = await prisma.user.findFirst({
     where: {
-      OR: [
-        { email: normalized },
-        { username: normalized },
-      ],
+      OR: [{ email: normalized }, { username: normalized }],
     },
   });
 
@@ -166,7 +174,10 @@ export async function authenticateCredentials(identifier: string, password: stri
   return mapUser(user);
 }
 
-export async function createDbSession(userId: string, ttlSeconds = 60 * 60 * 24 * 7) {
+export async function createDbSession(
+  userId: string,
+  ttlSeconds = 60 * 60 * 24 * 7
+) {
   const sessionToken = randomBytes(24).toString('hex');
   const tokenHash = sha256Hex(sessionToken);
   const expiresAt = new Date(Date.now() + ttlSeconds * 1000);
@@ -181,7 +192,7 @@ export async function createDbSession(userId: string, ttlSeconds = 60 * 60 * 24 
     'ACTIVE',
     expiresAt,
     now,
-    now,
+    now
   );
 
   return {
@@ -195,15 +206,21 @@ export async function createDbSession(userId: string, ttlSeconds = 60 * 60 * 24 
 export async function getSessionByCookieValue(rawToken?: string | null) {
   if (!rawToken) return null;
   const tokenHash = sha256Hex(rawToken);
-  const sessions = await prisma.$queryRawUnsafe(
+  const sessions = (await prisma.$queryRawUnsafe(
     'SELECT s.id AS sessionId, s.tokenHash, s.userId, s.status, s.expiresAt, s.createdAt, s.updatedAt, u.id AS userId, u.username, u.email, u.passwordHash, u.role, u.name, u.firstName, u.lastName, u.gender, u.mobile, u.countryCode, u.avatarUrl, u.emailVerified, u.createdAt AS userCreatedAt, u.updatedAt AS userUpdatedAt FROM `Session` s JOIN `User` u ON u.id = s.userId WHERE s.tokenHash = ? LIMIT 1',
-    tokenHash,
-  ) as unknown[];
+    tokenHash
+  )) as unknown[];
   const sessionRow = sessions[0] as Record<string, unknown> | undefined;
   if (!sessionRow) return null;
 
   if (new Date(sessionRow.expiresAt as string).getTime() <= Date.now()) {
-    await prisma.$executeRawUnsafe('UPDATE `Session` SET `status` = ? WHERE `id` = ?', 'REVOKED', sessionRow.sessionId as string).catch(() => undefined);
+    await prisma
+      .$executeRawUnsafe(
+        'UPDATE `Session` SET `status` = ? WHERE `id` = ?',
+        'REVOKED',
+        sessionRow.sessionId as string
+      )
+      .catch(() => undefined);
     return null;
   }
 
@@ -252,22 +269,36 @@ export async function getSessionByCookieValue(rawToken?: string | null) {
 export async function deleteSessionByCookieValue(rawToken?: string | null) {
   if (!rawToken) return false;
   const tokenHash = sha256Hex(rawToken);
-  const session = await prisma.$queryRawUnsafe('SELECT `id` FROM `Session` WHERE `tokenHash` = ? LIMIT 1', tokenHash) as unknown[];
+  const session = (await prisma.$queryRawUnsafe(
+    'SELECT `id` FROM `Session` WHERE `tokenHash` = ? LIMIT 1',
+    tokenHash
+  )) as unknown[];
   if (!session || session.length === 0) return false;
-  await prisma.$executeRawUnsafe('UPDATE `Session` SET `status` = ? WHERE `id` = ?', 'REVOKED', (session[0] as Record<string, unknown>).id).catch(() => undefined);
+  await prisma
+    .$executeRawUnsafe(
+      'UPDATE `Session` SET `status` = ? WHERE `id` = ?',
+      'REVOKED',
+      (session[0] as Record<string, unknown>).id
+    )
+    .catch(() => undefined);
   return true;
 }
 
 export async function revokeSessionsForUser(userId: string) {
-  await prisma.$executeRawUnsafe('UPDATE `Session` SET `status` = ? WHERE `userId` = ? AND `status` = ?', 'REVOKED', userId, 'ACTIVE');
+  await prisma.$executeRawUnsafe(
+    'UPDATE `Session` SET `status` = ? WHERE `userId` = ? AND `status` = ?',
+    'REVOKED',
+    userId,
+    'ACTIVE'
+  );
 }
 
 export async function listSessionsForUser(userId: string) {
-  const rows = await prisma.$queryRawUnsafe(
+  const rows = (await prisma.$queryRawUnsafe(
     'SELECT `id`,`tokenHash`,`userId`,`status`,`expiresAt`,`createdAt`,`updatedAt` FROM `Session` WHERE `userId` = ? AND `status` = ? ORDER BY `createdAt` DESC',
     userId,
-    'ACTIVE',
-  ) as unknown[];
+    'ACTIVE'
+  )) as unknown[];
   return rows.map((row) => {
     const rowRecord = row as Record<string, unknown>;
     return {

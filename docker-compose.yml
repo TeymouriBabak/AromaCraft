@@ -7,15 +7,15 @@ services:
     image: aromacraft_app:local
     restart: unless-stopped
     ports:
-      - "127.0.0.1:3000:3000"
+      - '127.0.0.1:3000:3000'
     env_file:
       - .env
     environment:
       NODE_ENV: ${NODE_ENV:-development}
-      DATABASE_URL: "${DATABASE_URL:?DATABASE_URL must be set in .env}"
-      REDIS_URL: "redis://redis:6379"
-      DOCKER_ENVIRONMENT: "true"
-      SMS_MOCK_URL: "http://mock-sms:3000"
+      DATABASE_URL: '${DATABASE_URL_DOCKER:?DATABASE_URL_DOCKER must be set in .env}'
+      REDIS_URL: 'redis://redis:6379'
+      DOCKER_ENVIRONMENT: 'true'
+      SMS_MOCK_URL: 'http://mock-sms:3000'
       SMTP_HOST: mailpit
       SMTP_PORT: 1025
       USE_MOCKS: ${USE_MOCKS}
@@ -38,15 +38,15 @@ services:
       target: builder
     container_name: aromacraft-test
     image: aromacraft_test:local
-    profiles: ["test"]
+    profiles: ['test']
     env_file:
       - .env
     environment:
       NODE_ENV: ${NODE_ENV:-test}
-      DATABASE_URL: "${DATABASE_URL:?DATABASE_URL must be set in .env}"
-      REDIS_URL: "redis://redis:6379"
-      DOCKER_ENVIRONMENT: "true"
-      SMS_MOCK_ENDPOINT: "http://mock-sms:3000/sms"
+      DATABASE_URL: '${DATABASE_URL:?DATABASE_URL must be set in .env}'
+      REDIS_URL: 'redis://redis:6379'
+      DOCKER_ENVIRONMENT: 'true'
+      SMS_MOCK_ENDPOINT: 'http://mock-sms:3000/sms'
       SMTP_HOST: mailpit
       SMTP_PORT: 1025
       USE_MOCKS: ${USE_MOCKS}
@@ -55,23 +55,27 @@ services:
       - redis
       - mailpit
       - mock-sms
-    command: ["npm", "test"]
+    command: ['npm', 'test']
 
   mariadb:
     image: mariadb:10.11
     container_name: aromacraft-mariadb
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD must be set in .env}"
+      MYSQL_ROOT_PASSWORD: '${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD must be set in .env}'
       MYSQL_DATABASE: ${MYSQL_DATABASE:-aromacraft}
       MYSQL_USER: ${MYSQL_USER:-aromacraft_user}
-      MYSQL_PASSWORD: "${MYSQL_PASSWORD:?MYSQL_PASSWORD must be set in .env}"
+      MYSQL_PASSWORD: '${MYSQL_PASSWORD:?MYSQL_PASSWORD must be set in .env}'
     ports:
-      - "127.0.0.1:3307:3306"
+      - '127.0.0.1:3307:3306'
     volumes:
       - aromacraft_mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD must be set in .env}\" >/dev/null 2>&1 || exit 1"]
+      test:
+        [
+          'CMD-SHELL',
+          'mysqladmin ping -h 127.0.0.1 -uroot -p"${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD must be set in .env}" >/dev/null 2>&1 || exit 1',
+        ]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -81,7 +85,7 @@ services:
     container_name: aromacraft-redis
     restart: unless-stopped
     ports:
-      - "127.0.0.1:6399:6379"
+      - '127.0.0.1:6399:6379'
     volumes:
       - redis-data:/data
 
@@ -90,10 +94,14 @@ services:
     container_name: aromacraft-mailpit
     restart: unless-stopped
     ports:
-      - "127.0.0.1:1025:1025" # SMTP
-      - "127.0.0.1:8025:8025" # HTTP UI
+      - '127.0.0.1:1025:1025' # SMTP
+      - '127.0.0.1:8025:8025' # HTTP UI
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://mailpit:8025/api/v1/info >/dev/null 2>&1 || exit 1"]
+      test:
+        [
+          'CMD-SHELL',
+          'wget -qO- http://mailpit:8025/api/v1/info >/dev/null 2>&1 || exit 1',
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -102,11 +110,40 @@ services:
     image: node:20-alpine
     container_name: aromacraft-mock-sms
     restart: unless-stopped
-    command: ["sh", "-c", "node -e \"const http=require('http');const port=3000;http.createServer((req,res)=>{if(req.method==='POST'&&req.url==='/sms'){let body='';req.on('data',c=>body+=c);req.on('end',()=>{console.log('[mock-sms] POST /sms',body);res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({ok:true}));});}else{res.writeHead(404);res.end('Not Found');}}).listen(port);console.log('mock-sms listening on',port);\""]
+    command:
+      - sh
+      - -c
+      - |
+        node -e "
+        const http = require('http');
+        const port = 3000;
+        http.createServer((req, res) => {
+          if (req.method === 'GET' && req.url === '/health') {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: true }));
+          } else if (req.method === 'POST' && req.url === '/sms') {
+            let body = '';
+            req.on('data', c => body += c);
+            req.on('end', () => {
+              console.log('[mock-sms] POST /sms', body);
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ ok: true }));
+            });
+          } else {
+            res.writeHead(404);
+            res.end('Not Found');
+          }
+        }).listen(port);
+        console.log('mock-sms listening on', port);
+        "
     ports:
-      - "127.0.0.1:3001:3000"
+      - '127.0.0.1:3001:3000'
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://mock-sms:3000/health >/dev/null 2>&1 || exit 1"]
+      test:
+        [
+          'CMD-SHELL',
+          'wget -qO- http://127.0.0.1:3000/health >/dev/null 2>&1 || exit 1',
+        ]
       interval: 10s
       timeout: 5s
       retries: 5

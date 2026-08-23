@@ -47,6 +47,6 @@ jobs:
         run: npx eslint src tests --max-warnings=0
       - name: Run tests
         env:
-          DATABASE_URL: "mysql://root:root_dev_password@127.0.0.1:3307/aromacraft"
-          REDIS_URL: "redis://127.0.0.1:6399"
+          DATABASE_URL: 'mysql://root:root_dev_password@127.0.0.1:3307/aromacraft'
+          REDIS_URL: 'redis://127.0.0.1:6399'
         run: npx vitest run

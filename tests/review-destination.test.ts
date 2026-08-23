@@ -6,7 +6,10 @@ import assert from 'node:assert/strict';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 import handler from '../src/pages/api/reviews';
-import { normalizeCommentDestination, buildCommentTitle } from '../src/lib/review-utils';
+import {
+  normalizeCommentDestination,
+  buildCommentTitle,
+} from '../src/lib/review-utils';
 
 type MockResponse = {
   statusCode: number;

@@ -33,6 +33,7 @@ model User {
   sessions           Session[]
   activities         UserActivity[]
   verificationTokens VerificationToken[]
+  wishlistItems      WishlistItem[]
 
   @@index([email])
   @@index([username])
@@ -54,19 +55,42 @@ model Session {
 }
 
 model Product {
-  id          String      @id @default(cuid())
-  slug        String      @unique @db.VarChar(120)
-  name        String      @db.VarChar(160)
-  description String?     @db.Text
-  price       Decimal     @db.Decimal(12, 0)
-  inventory   Int         @default(0)
-  imageUrl    String?     @db.VarChar(255)
-  isActive    Boolean     @default(true)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  orderItems  OrderItem[]
-
-  @@index([slug])
+  id           Int         @id
+  slug         String      @unique
+  catalog      String      @default("shop") // "shop" | "home"
+  name         String
+  brand        String
+  price        Decimal     @db.Decimal(12, 2)
+  rating       Float
+  reviews      Int
+  image        String
+  roast        String
+  process      String
+  origin       String
+  originRegion String
+  country      String
+  coffeeType   String
+  body         String
+  acidity      String
+  sweetness    String
+  size         String
+  description  String
+  inStock      Boolean     @default(true)
+  inventory Int @default(100)
+  brewMethods  Json
+  grindTypes   Json
+  tastingNotes Json
+  specialTags  Json
+  originalPrice        Float?
+  badge                String?
+  imageAlt             String?
+  subscriptionEligible Boolean  @default(false)
+  subscriptionSavings  Float?
+  altitude             String?
+  variety              String?
+  notes                String?
+  orderItems    OrderItem[]
+  wishlistItems WishlistItem[]
 }
 
 model Order {
@@ -139,7 +163,7 @@ model VerificationToken {
 model OrderItem {
   id        String   @id @default(cuid())
   orderId   String
-  productId String
+  productId Int
   quantity  Int      @default(1)
   unitPrice Decimal  @db.Decimal(12, 0)
   createdAt DateTime @default(now())
@@ -159,6 +183,18 @@ model BannedIdentity {
 
   @@unique([type, value])
   @@index([type])
+}
+
+model WishlistItem {
+  id        String   @id @default(cuid())
+  userId    String
+  productId Int
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([productId])
 }
 
 enum UserRole {

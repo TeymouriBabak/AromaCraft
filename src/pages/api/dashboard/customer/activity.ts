@@ -5,7 +5,10 @@ import { prisma } from '@/lib/prisma';
 
 // formatAxisLabel removed (unused)
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   const auth = await requireRole(req, res, ['customer', 'admin', 'manager']);
   if (!auth) return;
 
@@ -17,10 +20,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     const hourlyBuckets = Array.from({ length: 24 }, (_, hour) => {
-      const totalMinutes = activities.filter((entry) => new Date(entry.createdAt).getHours() === hour).reduce((sum, entry) => {
-        const duration = typeof entry.durationMs === 'number' ? entry.durationMs : 0;
-        return sum + duration;
-      }, 0);
+      const totalMinutes = activities
+        .filter((entry) => new Date(entry.createdAt).getHours() === hour)
+        .reduce((sum, entry) => {
+          const duration =
+            typeof entry.durationMs === 'number' ? entry.durationMs : 0;
+          return sum + duration;
+        }, 0);
 
       return {
         hour: `${String(hour).padStart(2, '0')}:00`,
@@ -34,7 +40,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const label = date.toLocaleString('en-US', { month: 'short' });
       const value = activities.filter((entry) => {
         const createdAt = new Date(entry.createdAt);
-        return createdAt.getMonth() === date.getMonth() && createdAt.getFullYear() === date.getFullYear();
+        return (
+          createdAt.getMonth() === date.getMonth() &&
+          createdAt.getFullYear() === date.getFullYear()
+        );
       }).length;
       return { month: label, actions: value };
     });
@@ -46,20 +55,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       details: entry.metadata ? JSON.stringify(entry.metadata) : undefined,
     }));
 
-    return jsonSuccess(res, {
-      activity: recentActivity,
-      charts: {
-        hourly: hourlyBuckets,
-        monthly: monthlyBuckets,
+    return jsonSuccess(
+      res,
+      {
+        activity: recentActivity,
+        charts: {
+          hourly: hourlyBuckets,
+          monthly: monthlyBuckets,
+        },
+        summary: {
+          totalActions: activities.length,
+          averageMinutes: activities.length
+            ? Math.round(
+                activities.reduce(
+                  (sum, entry) => sum + (entry.durationMs ?? 0),
+                  0
+                ) /
+                  60000 /
+                  activities.length
+              )
+            : 0,
+        },
       },
-      summary: {
-        totalActions: activities.length,
-        averageMinutes: activities.length
-          ? Math.round(activities.reduce((sum, entry) => sum + (entry.durationMs ?? 0), 0) / 60000 / activities.length)
-          : 0,
-      },
-    }, 200);
+      200
+    );
   } catch (error) {
-    return jsonError(res, 'activity_error', 'Unable to load activity.', 500, error instanceof Error ? error.message : undefined);
+    return jsonError(
+      res,
+      'activity_error',
+      'Unable to load activity.',
+      500,
+      error instanceof Error ? error.message : undefined
+    );
   }
 }

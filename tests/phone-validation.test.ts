@@ -3,7 +3,10 @@ import 'tsconfig-paths/register';
 
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { isPhoneNumberValid, normalizePhoneNumber } from '../src/lib/auth-validation';
+import {
+  isPhoneNumberValid,
+  normalizePhoneNumber,
+} from '../src/lib/auth-validation';
 
 type Case = { input: string; valid: boolean; normalized?: string };
 
@@ -19,12 +22,16 @@ const cases: Case[] = [
 test('phone validation and normalization', () => {
   for (const c of cases) {
     const ok = isPhoneNumberValid(c.input);
-  
+
     assert.strictEqual(ok, c.valid, `Validity mismatch for ${c.input}`);
     if (c.valid && c.normalized) {
       const norm = normalizePhoneNumber(c.input);
-      
-      assert.strictEqual(norm, c.normalized, `Normalization mismatch for ${c.input}: got ${norm}`);
+
+      assert.strictEqual(
+        norm,
+        c.normalized,
+        `Normalization mismatch for ${c.input}: got ${norm}`
+      );
     }
   }
 });

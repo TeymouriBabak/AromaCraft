@@ -1,6 +1,8 @@
 export type CommentDestination = 'home' | 'pike-place';
 
-export function normalizeCommentDestination(value?: string | null): CommentDestination {
+export function normalizeCommentDestination(
+  value?: string | null
+): CommentDestination {
   const normalized = (value ?? '').trim().toLowerCase();
   if (!normalized) return 'home';
   if (normalized.includes('pike')) return 'pike-place';

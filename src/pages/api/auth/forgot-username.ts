@@ -15,11 +15,21 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
   if (user) {
     // Security: Username recovery should send via email/SMS, not log to console
     if (process.env.NODE_ENV === 'development') {
-      if (process.env.USE_MOCKS === 'true' && process.env.NODE_ENV === 'development') {
+      if (
+        process.env.USE_MOCKS === 'true' &&
+        process.env.NODE_ENV === 'development'
+      ) {
         console.info(`[DEV] Username recovery request for ${user.email}`);
       }
     }
   }
 
-  return jsonSuccess(res, { message: 'If an account exists with this email, username recovery instructions have been sent.' }, 200);
+  return jsonSuccess(
+    res,
+    {
+      message:
+        'If an account exists with this email, username recovery instructions have been sent.',
+    },
+    200
+  );
 }

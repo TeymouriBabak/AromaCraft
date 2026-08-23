@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { motion } from "framer-motion";
-import { useRef } from "react";
+import { motion } from 'framer-motion';
+import { useRef } from 'react';
 
 type OtpInputProps = {
   value: string;
@@ -12,22 +12,30 @@ type OtpInputProps = {
 
 const OTP_LENGTH = 6;
 
-export default function OtpInput({ value, onChange, disabled = false, error = false }: OtpInputProps) {
+export default function OtpInput({
+  value,
+  onChange,
+  disabled = false,
+  error = false,
+}: OtpInputProps) {
   const refs = useRef<Array<HTMLInputElement | null>>([]);
 
-  const digits = Array.from({ length: OTP_LENGTH }, (_, index) => value[index] ?? "");
+  const digits = Array.from(
+    { length: OTP_LENGTH },
+    (_, index) => value[index] ?? ''
+  );
 
   const updateValue = (index: number, nextDigit: string) => {
-    const nextValue = value.split("");
+    const nextValue = value.split('');
     nextValue[index] = nextDigit;
-    const cleaned = nextValue.join("").slice(0, OTP_LENGTH);
+    const cleaned = nextValue.join('').slice(0, OTP_LENGTH);
     onChange(cleaned);
   };
 
   const handleChange = (index: number, raw: string) => {
-    const next = raw.replace(/\D/g, "").slice(-1);
+    const next = raw.replace(/\D/g, '').slice(-1);
     if (!next) {
-      updateValue(index, "");
+      updateValue(index, '');
       return;
     }
 
@@ -39,41 +47,51 @@ export default function OtpInput({ value, onChange, disabled = false, error = fa
 
   const handlePaste = (event: React.ClipboardEvent<HTMLInputElement>) => {
     event.preventDefault();
-    const pasted = (event.clipboardData.getData('text') ?? '').replace(/\D/g, '').slice(0, OTP_LENGTH);
+    const pasted = (event.clipboardData.getData('text') ?? '')
+      .replace(/\D/g, '')
+      .slice(0, OTP_LENGTH);
     if (!pasted) return;
 
     // prepare pasted digits (no extra intermediate variable needed)
 
     const digitsToApply = pasted.split('').slice(0, OTP_LENGTH);
-    const merged = Array.from({ length: OTP_LENGTH }, (_, digitIndex) => digitsToApply[digitIndex] ?? '');
+    const merged = Array.from(
+      { length: OTP_LENGTH },
+      (_, digitIndex) => digitsToApply[digitIndex] ?? ''
+    );
     onChange(merged.join(''));
 
     const nextIndex = Math.min(merged.filter(Boolean).length, OTP_LENGTH - 1);
     refs.current[nextIndex]?.focus();
   };
 
-  const handleKeyDown = (index: number, event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Backspace" && !value[index] && index > 0) {
+  const handleKeyDown = (
+    index: number,
+    event: React.KeyboardEvent<HTMLInputElement>
+  ) => {
+    if (event.key === 'Backspace' && !value[index] && index > 0) {
       refs.current[index - 1]?.focus();
       return;
     }
 
-    if (event.key === "Backspace" && value[index]) {
-      updateValue(index, "");
+    if (event.key === 'Backspace' && value[index]) {
+      updateValue(index, '');
       return;
     }
 
-    if (event.key === "ArrowLeft" && index > 0) {
+    if (event.key === 'ArrowLeft' && index > 0) {
       refs.current[index - 1]?.focus();
     }
-    if (event.key === "ArrowRight" && index < OTP_LENGTH - 1) {
+    if (event.key === 'ArrowRight' && index < OTP_LENGTH - 1) {
       refs.current[index + 1]?.focus();
     }
   };
 
   return (
     <motion.div
-      animate={error ? { x: [0, -6, 6, -4, 4, 0], scale: [1, 1.02, 1] } : { scale: 1 }}
+      animate={
+        error ? { x: [0, -6, 6, -4, 4, 0], scale: [1, 1.02, 1] } : { scale: 1 }
+      }
       transition={{ duration: 0.28 }}
       className="flex justify-center gap-2 sm:gap-3"
     >
@@ -94,8 +112,8 @@ export default function OtpInput({ value, onChange, disabled = false, error = fa
           onFocus={(event) => event.target.select()}
           className={`h-12 w-12 rounded-2xl border text-center text-lg font-semibold outline-none transition-all sm:h-14 sm:w-14 ${
             error
-              ? "border-[#e76f51] bg-[#fff7f5] shadow-[0_0_0_2px_rgba(231,111,81,0.15)]"
-              : "border-[#d4a373]/25 bg-[#f9f6f0] text-[#1a0f0a] focus:border-[#c9854d] focus:ring-2 focus:ring-[#d4a373]/25 dark:bg-[#23110c] dark:text-[#f6e5d1]"
+              ? 'border-[#e76f51] bg-[#fff7f5] shadow-[0_0_0_2px_rgba(231,111,81,0.15)]'
+              : 'border-[#d4a373]/25 bg-[#f9f6f0] text-[#1a0f0a] focus:border-[#c9854d] focus:ring-2 focus:ring-[#d4a373]/25 dark:bg-[#23110c] dark:text-[#f6e5d1]'
           }`}
         />
       ))}

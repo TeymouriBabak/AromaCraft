@@ -1,4 +1,7 @@
-import { isPhoneNumberValid, normalizePhoneNumber } from '../src/lib/auth-validation';
+import {
+  isPhoneNumberValid,
+  normalizePhoneNumber,
+} from '../src/lib/auth-validation';
 
 const cases = [
   '+14155552671',
@@ -9,5 +12,11 @@ const cases = [
 ];
 
 for (const c of cases) {
-  console.log(c, '=> valid=', isPhoneNumberValid(c), 'normalized=', normalizePhoneNumber(c));
+  console.log(
+    c,
+    '=> valid=',
+    isPhoneNumberValid(c),
+    'normalized=',
+    normalizePhoneNumber(c)
+  );
 }

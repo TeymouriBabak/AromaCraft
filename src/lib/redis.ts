@@ -1,9 +1,9 @@
 /**
  * Redis Rate Limiting
- * 
+ *
  * Integrates Redis for rate-limiting sensitive endpoints (Login, Signup, OTP Resend, Password Reset)
  * Implements limits per IP and per Identity (Mobile/Email)
- * 
+ *
  * OCL Rule 3: Distributed Rate Limiting
  */
 
@@ -23,7 +23,10 @@ let redisLoggedUnavailable = false; // ensure we log unavailability once in dev
 export async function initRedis(): Promise<RedisClientType | null> {
   // Reuse existing healthy client
   if (redisClient) {
-    const c = redisClient as RedisClientType & { isOpen?: boolean; isReady?: boolean };
+    const c = redisClient as RedisClientType & {
+      isOpen?: boolean;
+      isReady?: boolean;
+    };
     if (c.isOpen || c.isReady) return redisClient;
   }
 
@@ -37,7 +40,9 @@ export async function initRedis(): Promise<RedisClientType | null> {
     let candidate: RedisClientType | null = null;
     try {
       // Create client with a short connect timeout so unavailable Redis doesn't hang requests.
-      const opts: Parameters<typeof nodeCreateClient>[0] = { url: redisUrl } as Parameters<typeof nodeCreateClient>[0];
+      const opts: Parameters<typeof nodeCreateClient>[0] = {
+        url: redisUrl,
+      } as Parameters<typeof nodeCreateClient>[0];
       // Prefer socket-level connect timeout if supported by the redis client
       // Narrowing the opts type to allow adding socket.connectTimeout safely
       // Use unknown to avoid `any` while still allowing runtime augmentation
@@ -48,11 +53,15 @@ export async function initRedis(): Promise<RedisClientType | null> {
         reconnectStrategy: false,
       };
       augmentedOpts.disableOfflineQueue = true;
-      candidate = createRedisClient(augmentedOpts as Parameters<typeof nodeCreateClient>[0]) as unknown as RedisClientType;
+      candidate = createRedisClient(
+        augmentedOpts as Parameters<typeof nodeCreateClient>[0]
+      ) as unknown as RedisClientType;
       if (!candidate) {
         if (process.env.NODE_ENV !== 'production') {
           if (!redisLoggedUnavailable) {
-            console.warn('[redis] createClient returned null; continuing without Redis in dev.');
+            console.warn(
+              '[redis] createClient returned null; continuing without Redis in dev.'
+            );
             redisLoggedUnavailable = true;
           }
         }
@@ -64,7 +73,10 @@ export async function initRedis(): Promise<RedisClientType | null> {
         const message = err instanceof Error ? err.message : String(err);
         if (process.env.NODE_ENV !== 'production') {
           if (!redisLoggedUnavailable) {
-            console.warn('[redis] unavailable, rate limiting disabled in dev —', message);
+            console.warn(
+              '[redis] unavailable, rate limiting disabled in dev —',
+              message
+            );
             redisLoggedUnavailable = true;
           }
         } else {
@@ -76,28 +88,35 @@ export async function initRedis(): Promise<RedisClientType | null> {
       // Attempt to connect but fail fast (timeout). Avoid long internal reconnect backoffs.
       const connectPromise = candidate.connect();
       const timeoutMs = 2000;
-      const timed = new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs).unref());
-      const res = await Promise.race([connectPromise.then(() => true).catch(() => null), timed]);
+      const timed = new Promise<null>((resolve) =>
+        setTimeout(() => resolve(null), timeoutMs).unref()
+      );
+      const res = await Promise.race([
+        connectPromise.then(() => true).catch(() => null),
+        timed,
+      ]);
       if (!res) {
         // Connection did not succeed quickly — clean up and return null so callers can fall back.
         try {
           const maybe = candidate as unknown as {
             disconnect?: () => Promise<void> | void;
-        };
-        if (maybe.disconnect) {
-           // force-close the socket immediately; quit() would wait for pending
-           // replies and can hang when the connection is already broken
-           await Promise.resolve(maybe.disconnect()).catch(() => {});
-        } else if (candidate.quit) {
-           await candidate.quit().catch(() => {});
-        }
+          };
+          if (maybe.disconnect) {
+            // force-close the socket immediately; quit() would wait for pending
+            // replies and can hang when the connection is already broken
+            await Promise.resolve(maybe.disconnect()).catch(() => {});
+          } else if (candidate.quit) {
+            await candidate.quit().catch(() => {});
+          }
         } catch {
-           // ignore — we only care that the socket is released
+          // ignore — we only care that the socket is released
         }
 
         if (process.env.NODE_ENV !== 'production') {
           if (!redisLoggedUnavailable) {
-            console.warn('[redis] Connection timeout; continuing without Redis in dev.');
+            console.warn(
+              '[redis] Connection timeout; continuing without Redis in dev.'
+            );
             redisLoggedUnavailable = true;
           }
         } else {
@@ -111,15 +130,19 @@ export async function initRedis(): Promise<RedisClientType | null> {
       redisErrorHandler = onError;
       console.log('[redis] Connected');
       return redisClient;
-
     } catch (err) {
       if (process.env.NODE_ENV !== 'production') {
         if (!redisLoggedUnavailable) {
-          console.warn('[redis] Connection failed; continuing without Redis in dev.');
+          console.warn(
+            '[redis] Connection failed; continuing without Redis in dev.'
+          );
           redisLoggedUnavailable = true;
         }
       } else {
-        console.error('[redis] Connection failed:', err instanceof Error ? err.message : 'Unknown error');
+        console.error(
+          '[redis] Connection failed:',
+          err instanceof Error ? err.message : 'Unknown error'
+        );
       }
       if (candidate) {
         try {
@@ -136,7 +159,9 @@ export async function initRedis(): Promise<RedisClientType | null> {
       // In tests, provide an in-memory fallback so rate-limiting behavior is deterministic
       if (process.env.NODE_ENV === 'test') {
         if (!redisLoggedUnavailable) {
-          console.warn('[redis] Using in-memory test fallback for rate limiting');
+          console.warn(
+            '[redis] Using in-memory test fallback for rate limiting'
+          );
           redisLoggedUnavailable = true;
         }
         // Simple in-memory store implementing minimal methods used by this module
@@ -167,7 +192,10 @@ export async function initRedis(): Promise<RedisClientType | null> {
             store.delete(key);
             return 1;
           },
-          quit: async () => { store.clear(); return; },
+          quit: async () => {
+            store.clear();
+            return;
+          },
         } as unknown as RedisClientType;
         redisClient = inMemoryClient;
         // Mark the in-memory test fallback as ready so `getRedis()` treats it usable.
@@ -193,7 +221,10 @@ export async function initRedis(): Promise<RedisClientType | null> {
 export function getRedis(): RedisClientType | null {
   if (!redisClient) return null;
   // Treat non-open clients as unusable
-  const c = redisClient as RedisClientType & { isOpen?: boolean; isReady?: boolean };
+  const c = redisClient as RedisClientType & {
+    isOpen?: boolean;
+    isReady?: boolean;
+  };
   if (c.isOpen || c.isReady) return redisClient;
   return null;
 }
@@ -216,7 +247,9 @@ export async function checkRateLimit(
     redis = await initRedis();
   }
   if (!redis) {
-    console.error('[rate-limit] Redis unavailable; denying request to preserve fail-closed security.');
+    console.error(
+      '[rate-limit] Redis unavailable; denying request to preserve fail-closed security.'
+    );
     return false;
   }
 
@@ -228,7 +261,10 @@ export async function checkRateLimit(
     }
     return current <= limit;
   } catch (err) {
-    console.error('[rate-limit] Check failed:', err instanceof Error ? err.message : 'Unknown error');
+    console.error(
+      '[rate-limit] Check failed:',
+      err instanceof Error ? err.message : 'Unknown error'
+    );
     // If Redis errors due to connection or abort:
     // - In `test` and `production`, fail-closed (deny)
     // - In other non-production environments (development), fail-open (allow)
@@ -267,7 +303,10 @@ export async function resetRateLimit(key: string): Promise<void> {
   try {
     await redis.del(key);
   } catch (err) {
-    console.error('[rate-limit] Reset failed:', err instanceof Error ? err.message : 'Unknown error');
+    console.error(
+      '[rate-limit] Reset failed:',
+      err instanceof Error ? err.message : 'Unknown error'
+    );
   }
 }
 
@@ -284,7 +323,9 @@ export async function closeRedis(): Promise<void> {
       // remove attached error handler if present
       try {
         if (redisErrorHandler && redisClient) {
-          const c = redisClient as { off?: (event: string, fn: (err: unknown) => void) => void };
+          const c = redisClient as {
+            off?: (event: string, fn: (err: unknown) => void) => void;
+          };
           c.off?.('error', redisErrorHandler);
         }
       } catch {
@@ -293,7 +334,10 @@ export async function closeRedis(): Promise<void> {
       redisErrorHandler = null;
       console.log('[redis] Disconnected');
     } catch (err) {
-      console.error('[redis] Disconnect error:', err instanceof Error ? err.message : 'Unknown error');
+      console.error(
+        '[redis] Disconnect error:',
+        err instanceof Error ? err.message : 'Unknown error'
+      );
     }
   }
 }
@@ -302,14 +346,20 @@ export async function closeRedis(): Promise<void> {
  * Rate limit config for different endpoints
  */
 
-function parseEnvLimit(varName: string, defaultLimit: number, defaultWindow: number) {
+function parseEnvLimit(
+  varName: string,
+  defaultLimit: number,
+  defaultWindow: number
+) {
   const raw = process.env[varName];
   if (!raw) return { limit: defaultLimit, windowSeconds: defaultWindow };
   const parts = String(raw).split(':');
-  if (parts.length !== 2) return { limit: defaultLimit, windowSeconds: defaultWindow };
+  if (parts.length !== 2)
+    return { limit: defaultLimit, windowSeconds: defaultWindow };
   const lim = Number(parts[0]);
   const win = Number(parts[1]);
-  if (!Number.isFinite(lim) || !Number.isFinite(win) || lim <= 0 || win <= 0) return { limit: defaultLimit, windowSeconds: defaultWindow };
+  if (!Number.isFinite(lim) || !Number.isFinite(win) || lim <= 0 || win <= 0)
+    return { limit: defaultLimit, windowSeconds: defaultWindow };
   return { limit: Math.floor(lim), windowSeconds: Math.floor(win) };
 }
 

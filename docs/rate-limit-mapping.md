@@ -3,6 +3,7 @@
 This file maps endpoints to limiter keys, limits, Redis behavior, and test cases. Do NOT apply changes yet — this is a patch-ready plan for Phase 3 implementation.
 
 ## Guidelines
+
 - Always apply both per-identifier and per-IP checks where applicable.
 - Use hashed identifiers in Redis keys (SHA256/HMAC) to avoid PII in Redis keys.
 - Fail-closed on Redis unavailability (deny) for auth-critical endpoints.
@@ -10,6 +11,7 @@ This file maps endpoints to limiter keys, limits, Redis behavior, and test cases
 ---
 
 ### 1) `POST /api/auth/login` -> `src/pages/api/auth/login.ts`
+
 - Keys:
   - `login_id:{sha256(identifier)}` (identifier = normalized email or username)
   - `login_ip:{ip}`
@@ -24,6 +26,7 @@ This file maps endpoints to limiter keys, limits, Redis behavior, and test cases
   - Redis mock unavailable -> expect generic deny and 503 or 429 depending on policy (current: 429)
 
 ### 2) `POST /api/auth/signup` -> `src/pages/api/auth/signup.ts`
+
 - Keys:
   - `signup_ip:{ip}`
   - `signup_email:{sha256(email)}`
@@ -36,6 +39,7 @@ This file maps endpoints to limiter keys, limits, Redis behavior, and test cases
   - 4 signup attempts for same email -> 429 on 4th
 
 ### 3) `POST /api/auth/resend-verification` -> `src/pages/api/auth/resend-verification.ts`
+
 - Keys:
   - `otp_resend:{sha256(email)}`
   - `otp_resend_ip:{ip}`
@@ -48,6 +52,7 @@ This file maps endpoints to limiter keys, limits, Redis behavior, and test cases
   - ensure after resend older OTPs reject (existing tests cover)
 
 ### 4) `POST /api/auth/verify-account` -> `src/pages/api/auth/verify-account.ts`
+
 - Keys:
   - `otp_verify_id:{tokenId}`
   - `otp_verify_email:{sha256(email)}`
@@ -60,6 +65,7 @@ This file maps endpoints to limiter keys, limits, Redis behavior, and test cases
   - multiple invalid attempts escalate to temporary block
 
 ### 5) `POST /api/auth/forgot-password` & `POST /api/auth/forgot-username`
+
 - Keys:
   - `forgot:{sha256(email_or_mobile)}`
   - `forgot_ip:{ip}`
@@ -71,6 +77,7 @@ This file maps endpoints to limiter keys, limits, Redis behavior, and test cases
   - repeated forgot requests -> 429 after limit
 
 ### 6) `GET /api/auth/check-username`, `GET /api/auth/check-email`, `GET /api/auth/check-mobile`
+
 - Keys:
   - `lookup_ip:{ip}`
 - Limits:
@@ -80,6 +87,7 @@ This file maps endpoints to limiter keys, limits, Redis behavior, and test cases
   - enumerate 31 checks from IP -> 429
 
 ### 7) `POST /api/auth/upload-avatar` -> DOS/file abuse protections
+
 - Keys:
   - `avatar_user:{userId}`
   - `avatar_ip:{ip}`
@@ -91,6 +99,7 @@ This file maps endpoints to limiter keys, limits, Redis behavior, and test cases
   - 21 uploads by user -> 429
 
 ### 8) Dev endpoints: `src/pages/api/dev/*`
+
 - Behavior:
   - Deny in production (check NODE_ENV). In dev, keep limited to 10/min per IP.
 - Tests:
@@ -99,6 +108,7 @@ This file maps endpoints to limiter keys, limits, Redis behavior, and test cases
 ---
 
 ## Implementation checklist (patch-ready)
+
 - Update `RATE_LIMIT_CONFIG` in `src/lib/redis.ts` with above named configs.
 - Add `rateLimitMiddleware` usage to each handler (wrap or call inside handler) and enforce both per-identifier and per-IP keys.
 - Add helper `keyForIdentifier(type, identifier)` that normalizes then returns hashed key.

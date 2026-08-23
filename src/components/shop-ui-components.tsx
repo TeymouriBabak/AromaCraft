@@ -1,29 +1,29 @@
-"use client";
+'use client';
 
-import { motion } from "framer-motion";
-import { Truck, Shield, Gift, Leaf } from "lucide-react";
+import { motion } from 'framer-motion';
+import { Truck, Shield, Gift, Leaf } from 'lucide-react';
 
 export function TrustStrip() {
   const trustItems = [
     {
       icon: Leaf,
-      title: "Freshly Roasted",
-      description: "Premium global selections",
+      title: 'Freshly Roasted',
+      description: 'Premium global selections',
     },
     {
       icon: Shield,
-      title: "Trusted Brands",
-      description: "Globally loved coffee houses",
+      title: 'Trusted Brands',
+      description: 'Globally loved coffee houses',
     },
     {
       icon: Truck,
-      title: "Fast Shipping",
-      description: "Free over $50",
+      title: 'Fast Shipping',
+      description: 'Free over $50',
     },
     {
       icon: Gift,
-      title: "Subscription Savings",
-      description: "Up to 15% off recurring",
+      title: 'Subscription Savings',
+      description: 'Up to 15% off recurring',
     },
   ];
 
@@ -76,7 +76,8 @@ export function EmptyState() {
         No products found
       </h3>
       <p className="mt-2 max-w-sm text-center text-[#6e4b33] dark:text-[#e8d8c0]">
-        Try adjusting your filters or search terms to discover more premium coffees
+        Try adjusting your filters or search terms to discover more premium
+        coffees
       </p>
     </motion.div>
   );
@@ -115,11 +116,18 @@ export function ResultsToolbar({
     >
       <div className="flex items-center justify-between sm:block">
         <p className="text-sm text-[#6e4b33] dark:text-[#e8d8c0]">
-          Showing <span className="font-semibold text-[#1a0f0a] dark:text-[#f6e5d1]">{count}</span> products
+          Showing{' '}
+          <span className="font-semibold text-[#1a0f0a] dark:text-[#f6e5d1]">
+            {count}
+          </span>{' '}
+          products
         </p>
       </div>
       <div className="flex items-center gap-3">
-        <label htmlFor="sort" className="text-sm font-medium text-[#1a0f0a] dark:text-[#f6e5d1]">
+        <label
+          htmlFor="sort"
+          className="text-sm font-medium text-[#1a0f0a] dark:text-[#f6e5d1]"
+        >
           Sort by
         </label>
         <select
@@ -147,7 +155,11 @@ interface QuickFilterChipsProps {
   onSelect: (filterId: string) => void;
 }
 
-export function QuickFilterChips({ filters, activeFilter, onSelect }: QuickFilterChipsProps) {
+export function QuickFilterChips({
+  filters,
+  activeFilter,
+  onSelect,
+}: QuickFilterChipsProps) {
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -162,8 +174,8 @@ export function QuickFilterChips({ filters, activeFilter, onSelect }: QuickFilte
           onClick={() => onSelect(filter.id)}
           className={`rounded-full px-4 py-2 text-xs font-medium transition ${
             activeFilter === filter.id
-              ? "bg-[#d4a373] text-white shadow-lg"
-              : "border border-[#d4a373]/30 bg-white text-[#1a0f0a] hover:border-[#d4a373] dark:bg-[#1a0f0a] dark:text-[#f6e5d1]"
+              ? 'bg-[#d4a373] text-white shadow-lg'
+              : 'border border-[#d4a373]/30 bg-white text-[#1a0f0a] hover:border-[#d4a373] dark:bg-[#1a0f0a] dark:text-[#f6e5d1]'
           }`}
         >
           {filter.label}

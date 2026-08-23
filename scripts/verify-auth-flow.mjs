@@ -52,9 +52,17 @@ async function request(path, options = {}) {
       (response) => {
         let data = '';
         response.setEncoding('utf8');
-        response.on('data', (chunk) => { data += chunk; });
-        response.on('end', () => resolve({ statusCode: response.statusCode, headers: response.headers, body: data }));
-      },
+        response.on('data', (chunk) => {
+          data += chunk;
+        });
+        response.on('end', () =>
+          resolve({
+            statusCode: response.statusCode,
+            headers: response.headers,
+            body: data,
+          })
+        );
+      }
     );
     req.on('error', reject);
     if (body) req.write(body);
@@ -68,8 +76,17 @@ async function request(path, options = {}) {
 
 async function querySessionByCookieValue(rawToken) {
   const tokenHash = createHash('sha256').update(rawToken).digest('hex');
-  const conn = await mysql.createConnection({ host: '172.29.236.10', port: 3306, user: 'aromacraft_user', password: 'local_app_password', database: 'aromacraft' });
-  const [rows] = await conn.execute('SELECT id, userId, status, expiresAt FROM Session WHERE tokenHash = ?', [tokenHash]);
+  const conn = await mysql.createConnection({
+    host: '172.29.236.10',
+    port: 3306,
+    user: 'aromacraft_user',
+    password: 'local_app_password',
+    database: 'aromacraft',
+  });
+  const [rows] = await conn.execute(
+    'SELECT id, userId, status, expiresAt FROM Session WHERE tokenHash = ?',
+    [tokenHash]
+  );
   await conn.end();
   return rows;
 }
@@ -77,7 +94,11 @@ async function querySessionByCookieValue(rawToken) {
 async function main() {
   await delay(1000);
   const dashboardBefore = await request('/dashboard');
-  console.log('DASHBOARD_BEFORE', dashboardBefore.statusCode, dashboardBefore.headers.location || '-');
+  console.log(
+    'DASHBOARD_BEFORE',
+    dashboardBefore.statusCode,
+    dashboardBefore.headers.location || '-'
+  );
 
   const login = await request('/api/auth/login', {
     method: 'POST',
@@ -85,7 +106,10 @@ async function main() {
     body: 'email=tbabak@example.com&password=Teymouribabak78%23',
   });
   console.log('LOGIN_STATUS', login.statusCode);
-  console.log('LOGIN_SETCOOKIE', JSON.stringify(login.headers['set-cookie'] || []));
+  console.log(
+    'LOGIN_SETCOOKIE',
+    JSON.stringify(login.headers['set-cookie'] || [])
+  );
 
   const sessionToken = getCookieValue('aromacraft_sid');
   if (!sessionToken) {
@@ -94,7 +118,10 @@ async function main() {
   }
 
   const sessionRows = await querySessionByCookieValue(sessionToken);
-  console.log('DB_SESSION_CREATED', Array.isArray(sessionRows) && sessionRows.length > 0 ? 'true' : 'false');
+  console.log(
+    'DB_SESSION_CREATED',
+    Array.isArray(sessionRows) && sessionRows.length > 0 ? 'true' : 'false'
+  );
   console.log('DB_SESSION_ROWS', JSON.stringify(sessionRows));
 
   const me = await request('/api/auth/me');
@@ -102,38 +129,78 @@ async function main() {
   console.log('ME_BODY', me.body);
 
   const dashboardAfter = await request('/dashboard');
-  console.log('DASHBOARD_AFTER', dashboardAfter.statusCode, dashboardAfter.headers.location || '-');
+  console.log(
+    'DASHBOARD_AFTER',
+    dashboardAfter.statusCode,
+    dashboardAfter.headers.location || '-'
+  );
 
   const routeHintOnlyJar = new Map(jar);
   routeHintOnlyJar.delete('aromacraft_sid');
 
   const routeHintResponse = await (async () => {
     const url = new URL('/dashboard', base);
-    const reqHeaders = { cookie: Array.from(routeHintOnlyJar.values()).join('; ') };
+    const reqHeaders = {
+      cookie: Array.from(routeHintOnlyJar.values()).join('; '),
+    };
     return new Promise((resolve, reject) => {
-      const req = http.request({ protocol: url.protocol, hostname: url.hostname, port: url.port, path: url.pathname, method: 'GET', headers: reqHeaders }, (response) => {
-        response.on('data', () => {});
-        response.on('end', () => resolve({ statusCode: response.statusCode, headers: response.headers }));
-      });
+      const req = http.request(
+        {
+          protocol: url.protocol,
+          hostname: url.hostname,
+          port: url.port,
+          path: url.pathname,
+          method: 'GET',
+          headers: reqHeaders,
+        },
+        (response) => {
+          response.on('data', () => {});
+          response.on('end', () =>
+            resolve({
+              statusCode: response.statusCode,
+              headers: response.headers,
+            })
+          );
+        }
+      );
       req.on('error', reject);
       req.end();
     });
   })();
-  console.log('ROUTE_HINT_ONLY_DASHBOARD', routeHintResponse.statusCode, routeHintResponse.headers.location || '-');
+  console.log(
+    'ROUTE_HINT_ONLY_DASHBOARD',
+    routeHintResponse.statusCode,
+    routeHintResponse.headers.location || '-'
+  );
 
   const logout = await request('/api/auth/logout', { method: 'POST' });
   console.log('LOGOUT_STATUS', logout.statusCode);
-  console.log('LOGOUT_SETCOOKIE', JSON.stringify(logout.headers['set-cookie'] || []));
+  console.log(
+    'LOGOUT_SETCOOKIE',
+    JSON.stringify(logout.headers['set-cookie'] || [])
+  );
 
   const logoutSessionRows = await querySessionByCookieValue(sessionToken);
-  console.log('DB_SESSION_REVOKED', Array.isArray(logoutSessionRows) && logoutSessionRows.length === 0 ? 'true' : 'false');
-  console.log('DB_SESSION_AFTER_LOGOUT_ROWS', JSON.stringify(logoutSessionRows));
+  console.log(
+    'DB_SESSION_REVOKED',
+    Array.isArray(logoutSessionRows) && logoutSessionRows.length === 0
+      ? 'true'
+      : 'false'
+  );
+  console.log(
+    'DB_SESSION_AFTER_LOGOUT_ROWS',
+    JSON.stringify(logoutSessionRows)
+  );
 
   const meAfterLogout = await request('/api/auth/me');
   console.log('ME_AFTER_LOGOUT_STATUS', meAfterLogout.statusCode);
 
   const dashboardAfterLogout = await request('/dashboard');
-  console.log('DASHBOARD_AFTER_LOGOUT', dashboardAfterLogout.statusCode, dashboardAfterLogout.headers.location || '-');
+  console.log(
+    'DASHBOARD_AFTER_LOGOUT',
+    dashboardAfterLogout.statusCode,
+    dashboardAfterLogout.headers.location || '-'
+  );
 }
 
 main().catch((error) => {

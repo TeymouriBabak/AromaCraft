@@ -14,24 +14,38 @@ function makeMockRes() {
   let statusCode = 200;
   let body: unknown = null;
   return {
-    status(code: number) { statusCode = code; return this; },
-    json(obj: unknown) { body = obj; return { statusCode, body }; },
-    setHeader() { return this; },
-    _get() { return { statusCode, body }; },
-  } as unknown as { status(code: number): unknown; json(obj: unknown): { statusCode: number; body: unknown }; _get(): { statusCode: number; body: unknown } };
+    status(code: number) {
+      statusCode = code;
+      return this;
+    },
+    json(obj: unknown) {
+      body = obj;
+      return { statusCode, body };
+    },
+    setHeader() {
+      return this;
+    },
+    _get() {
+      return { statusCode, body };
+    },
+  } as unknown as {
+    status(code: number): unknown;
+    json(obj: unknown): { statusCode: number; body: unknown };
+    _get(): { statusCode: number; body: unknown };
+  };
 }
 
 test('wrong OTP attempts exhaust the attempt limit', async () => {
   const email = `otp-attempts-${Date.now()}@example.com`;
   const user = await createDbUser({
-    username: `otpattempt${randomUUID().slice(0,8)}`,
+    username: `otpattempt${randomUUID().slice(0, 8)}`,
     email,
     password: 'AttemptsOtp!23',
     role: 'customer',
     firstName: 'Otp',
     lastName: 'Attempts',
     gender: 'Other',
-    mobile: `+1415${String(Date.now() % 100000).padStart(5,'0')}`,
+    mobile: `+1415${String(Date.now() % 100000).padStart(5, '0')}`,
     countryCode: '+1',
   });
   if (!user) throw new Error('failed to create test user');
@@ -55,15 +69,29 @@ test('wrong OTP attempts exhaust the attempt limit', async () => {
 
   // Submit a wrong code to increment attemptCount to 5 and ensure subsequent rejection
   const wrongRes = makeMockRes();
-  await handleVerifyAccount({ method: 'POST', body: { email, code: '000000' } } as unknown as NextApiRequest, wrongRes as unknown as NextApiResponse);
+  await handleVerifyAccount(
+    {
+      method: 'POST',
+      body: { email, code: '000000' },
+    } as unknown as NextApiRequest,
+    wrongRes as unknown as NextApiResponse
+  );
   assert.equal(wrongRes._get().statusCode, 401);
 
   // Confirm attemptCount is now >=5
-  const row = await prisma.verificationToken.findUnique({ where: { id: tokenId } });
+  const row = await prisma.verificationToken.findUnique({
+    where: { id: tokenId },
+  });
   assert.ok(row && (row.attemptCount ?? 0) >= 5);
 
   // Now even the correct code must be rejected
   const goodRes = makeMockRes();
-  await handleVerifyAccount({ method: 'POST', body: { email, code: correct } } as unknown as NextApiRequest, goodRes as unknown as NextApiResponse);
+  await handleVerifyAccount(
+    {
+      method: 'POST',
+      body: { email, code: correct },
+    } as unknown as NextApiRequest,
+    goodRes as unknown as NextApiResponse
+  );
   assert.equal(goodRes._get().statusCode, 401);
 });

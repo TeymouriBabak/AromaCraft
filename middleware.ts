@@ -1,46 +1,38 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 const SESSION_COOKIE_NAME = 'aromacraft_sid';
-const protectedRoutePrefixes = ['/dashboard', '/account'];
-const publicRoutePaths = ['/', '/about', '/auth', '/checkout', '/contact', '/login', '/quiz', '/shop'];
-const publicRoutePrefixes = ['/about', '/checkout', '/quiz', '/shop', '/contact'];
-const publicAssetPrefixes = ['/_next', '/api', '/images', '/fonts', '/icons', '/favicon', '/robots.txt', '/sitemap.xml'];
+const protectedPagePrefixes = ['/dashboard', '/account'];
+const protectedApiPrefixes = ['/api/dashboard'];
 
-function isProtectedRoute(pathname: string) {
-  return protectedRoutePrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
-}
-
-function isPublicRoute(pathname: string) {
-  return publicRoutePaths.includes(pathname) || publicRoutePrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
-}
-
-function isPublicAssetRoute(pathname: string) {
-  return publicAssetPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(prefix));
+function startsWithPrefix(pathname: string, prefixes: string[]) {
+  return prefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Block /api/dev unless in development mode
   if (pathname.startsWith('/api/dev')) {
     if (process.env.NODE_ENV !== 'development') {
       return new NextResponse('Not Found', { status: 404 });
     }
-  }
-
-  if (isPublicAssetRoute(pathname)) {
-    return NextResponse.next();
-  }
-
-  if (!isProtectedRoute(pathname) || isPublicRoute(pathname)) {
     return NextResponse.next();
   }
 
   const hasSessionCookie = Boolean(req.cookies.get(SESSION_COOKIE_NAME)?.value);
-  if (!hasSessionCookie) {
+
+  if (startsWithPrefix(pathname, protectedApiPrefixes)) {
+    if (!hasSessionCookie) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    return NextResponse.next();
+  }
+
+  if (startsWithPrefix(pathname, protectedPagePrefixes) && !hasSessionCookie) {
     const redirectUrl = new URL('/login', req.url);
-    const callbackValue = `${req.nextUrl.pathname}${req.nextUrl.search}`;
-    redirectUrl.searchParams.set('callbackUrl', callbackValue);
+    redirectUrl.searchParams.set(
+      'callbackUrl',
+      `${pathname}${req.nextUrl.search}`
+    );
     return NextResponse.redirect(redirectUrl);
   }
 
@@ -48,5 +40,10 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/account/:path*', '/api/dashboard/:path*', '/checkout', '/wishlist', '/login', '/auth'],
+  matcher: [
+    '/dashboard/:path*',
+    '/account/:path*',
+    '/api/dashboard/:path*',
+    '/api/dev/:path*',
+  ],
 };

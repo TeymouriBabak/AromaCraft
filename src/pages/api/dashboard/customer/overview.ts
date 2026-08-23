@@ -9,8 +9,11 @@ const overviewData = {
   pointsBalance: 1830,
 };
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
-  const auth = requireRole(req, res, ['customer', 'admin', 'manager']);
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  const auth = await requireRole(req, res, ['customer', 'admin', 'manager']);
   if (!auth) return;
   return jsonSuccess(res, { overview: overviewData }, 200);
 }

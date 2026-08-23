@@ -6,7 +6,10 @@ export const baseTransition = { duration: 0.36 };
 
 export const staggerContainer: Variants = {
   hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.06, delayChildren: 0.04 } },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.06, delayChildren: 0.04 },
+  },
 };
 
 export const staggerItem: Variants = {
@@ -40,7 +43,12 @@ export const scaleIn: Variants = {
 };
 
 export const cardHover = {
-  hover: { y: -8, scale: 1.02, boxShadow: '0 22px 48px rgba(16,12,10,0.22)', transition: { duration: 0.24 } },
+  hover: {
+    y: -8,
+    scale: 1.02,
+    boxShadow: '0 22px 48px rgba(16,12,10,0.22)',
+    transition: { duration: 0.24 },
+  },
   tap: { scale: 0.985, transition: { duration: 0.12 } },
 };
 
@@ -50,15 +58,28 @@ export const imageScale = {
 };
 
 export const floating: Variants = {
-  float: { y: [0, -6, 0], transition: { duration: 4, repeat: Infinity, ease: 'linear' } },
+  float: {
+    y: [0, -6, 0],
+    transition: { duration: 4, repeat: Infinity, ease: 'linear' },
+  },
 };
 
 export const softGlow: Variants = {
-  pulse: { boxShadow: ['0 0 0 rgba(0,0,0,0)', '0 0 20px rgba(212,163,115,0.18)', '0 0 0 rgba(0,0,0,0)'], transition: { duration: 2, repeat: Infinity } },
+  pulse: {
+    boxShadow: [
+      '0 0 0 rgba(0,0,0,0)',
+      '0 0 20px rgba(212,163,115,0.18)',
+      '0 0 0 rgba(0,0,0,0)',
+    ],
+    transition: { duration: 2, repeat: Infinity },
+  },
 };
 
 export const shimmer: Variants = {
-  animate: { backgroundPosition: ['0% 50%', '100% 50%'], transition: { duration: 1.6, repeat: Infinity, ease: 'linear' } },
+  animate: {
+    backgroundPosition: ['0% 50%', '100% 50%'],
+    transition: { duration: 1.6, repeat: Infinity, ease: 'linear' },
+  },
 };
 
 const variants = {

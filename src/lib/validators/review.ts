@@ -33,19 +33,8 @@ export type CreateReviewPayload = z.infer<typeof createReviewSchema>;
  * List reviews with pagination
  */
 export const listReviewsSchema = z.object({
-  limit: z
-    .number()
-    .int()
-    .min(1)
-    .max(100)
-    .optional()
-    .default(30),
-  offset: z
-    .number()
-    .int()
-    .min(0)
-    .optional()
-    .default(0),
+  limit: z.number().int().min(1).max(100).optional().default(30),
+  offset: z.number().int().min(0).optional().default(0),
 });
 
 export type ListReviewsPayload = z.infer<typeof listReviewsSchema>;

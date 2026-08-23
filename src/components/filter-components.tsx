@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { ChevronDown, X } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState } from 'react';
+import { ChevronDown, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export type FilterOption = {
   label: string;
@@ -41,7 +41,7 @@ export function AccordionFilter({
         <span className="text-sm">{group.title}</span>
         <ChevronDown
           size={16}
-          className={`transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}
+          className={`transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
         />
       </button>
 
@@ -49,7 +49,7 @@ export function AccordionFilter({
         {isOpen && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
+            animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
@@ -63,7 +63,7 @@ export function AccordionFilter({
                     className="flex cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-[#f9f6f0] dark:hover:bg-[#1a0f0a]"
                   >
                     <input
-                      type={allowMultiple ? "checkbox" : "radio"}
+                      type={allowMultiple ? 'checkbox' : 'radio'}
                       checked={isSelected}
                       onChange={() => onToggle(option.value)}
                       className="h-4 w-4 rounded border-[#d4a373] accent-[#d4a373]"
@@ -91,14 +91,14 @@ export function AccordionFilter({
 interface FilterChipProps {
   label: string;
   onRemove: () => void;
-  variant?: "default" | "brand";
+  variant?: 'default' | 'brand';
   brandColor?: string;
 }
 
 export function FilterChip({
   label,
   onRemove,
-  variant = "default",
+  variant = 'default',
   brandColor,
 }: FilterChipProps) {
   return (
@@ -107,11 +107,15 @@ export function FilterChip({
       animate={{ scale: 1, opacity: 1 }}
       exit={{ scale: 0.8, opacity: 0 }}
       className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition ${
-        variant === "brand"
-          ? "border border-[#d4a373]/30 bg-[#f9f6f0] text-[#1a0f0a] dark:bg-[#23110c]"
-          : "border border-[#d4a373]/30 bg-white/70 text-[#1a0f0a] dark:bg-[#23110c] dark:text-[#f6e5d1]"
+        variant === 'brand'
+          ? 'border border-[#d4a373]/30 bg-[#f9f6f0] text-[#1a0f0a] dark:bg-[#23110c]'
+          : 'border border-[#d4a373]/30 bg-white/70 text-[#1a0f0a] dark:bg-[#23110c] dark:text-[#f6e5d1]'
       }`}
-      style={variant === "brand" && brandColor ? { borderColor: brandColor, backgroundColor: `${brandColor}15` } : {}}
+      style={
+        variant === 'brand' && brandColor
+          ? { borderColor: brandColor, backgroundColor: `${brandColor}15` }
+          : {}
+      }
     >
       <span>{label}</span>
       <button
@@ -126,18 +130,27 @@ export function FilterChip({
 }
 
 interface FilterChipsRowProps {
-  activeFilters: Array<{ id: string; label: string; variant?: "default" | "brand"; brandColor?: string }>;
+  activeFilters: Array<{
+    id: string;
+    label: string;
+    variant?: 'default' | 'brand';
+    brandColor?: string;
+  }>;
   onRemove: (id: string) => void;
   onClearAll?: () => void;
 }
 
-export function FilterChipsRow({ activeFilters, onRemove, onClearAll }: FilterChipsRowProps) {
+export function FilterChipsRow({
+  activeFilters,
+  onRemove,
+  onClearAll,
+}: FilterChipsRowProps) {
   if (activeFilters.length === 0) return null;
 
   return (
     <motion.div
       initial={{ height: 0, opacity: 0 }}
-      animate={{ height: "auto", opacity: 1 }}
+      animate={{ height: 'auto', opacity: 1 }}
       exit={{ height: 0, opacity: 0 }}
       className="flex flex-wrap items-center gap-2 rounded-lg bg-[#f9f6f0]/50 p-3 dark:bg-[#23110c]/50"
     >

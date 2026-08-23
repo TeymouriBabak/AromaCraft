@@ -18,7 +18,10 @@ const DEFAULT_HEADERS: Record<string, string> = {
 };
 
 function buildUrl(path: string) {
-  const rawBase = (process.env.NEXT_PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '');
+  const rawBase = (process.env.NEXT_PUBLIC_API_BASE_URL ?? '').replace(
+    /\/$/,
+    ''
+  );
   const base = rawBase || '';
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
   if (!base) return normalizedPath;
@@ -44,7 +47,11 @@ function normalizeHeaders(headers?: HeadersInit): Record<string, string> {
   return headers as Record<string, string>;
 }
 
-function getErrorMessage(payload: unknown, fallbackStatusText: string, fallbackMessage: string) {
+function getErrorMessage(
+  payload: unknown,
+  fallbackStatusText: string,
+  fallbackMessage: string
+) {
   if (payload && typeof payload === 'object') {
     const record = payload as Record<string, unknown>;
     if (record.error && typeof record.error === 'object') {
@@ -77,10 +84,26 @@ async function parseResponse<T>(res: Response): Promise<T> {
 
   if (!res.ok) {
     const message = getErrorMessage(payload, res.statusText, 'Request failed');
-    const errorPayload = payload && typeof payload === 'object' && 'error' in payload ? (payload as Record<string, unknown>).error : undefined;
-    const code = errorPayload && typeof errorPayload === 'object' && 'code' in errorPayload ? (errorPayload as Record<string, unknown>).code : undefined;
-    const details = errorPayload && typeof errorPayload === 'object' && 'details' in errorPayload ? (errorPayload as Record<string, unknown>).details : payload;
-    throw new ApiError(message, res.status, typeof code === 'string' ? code : undefined, details);
+    const errorPayload =
+      payload && typeof payload === 'object' && 'error' in payload
+        ? (payload as Record<string, unknown>).error
+        : undefined;
+    const code =
+      errorPayload && typeof errorPayload === 'object' && 'code' in errorPayload
+        ? (errorPayload as Record<string, unknown>).code
+        : undefined;
+    const details =
+      errorPayload &&
+      typeof errorPayload === 'object' &&
+      'details' in errorPayload
+        ? (errorPayload as Record<string, unknown>).details
+        : payload;
+    throw new ApiError(
+      message,
+      res.status,
+      typeof code === 'string' ? code : undefined,
+      details
+    );
   }
 
   if (payload && typeof payload === 'object' && 'ok' in payload) {
@@ -88,19 +111,25 @@ async function parseResponse<T>(res: Response): Promise<T> {
     if (wrappedPayload.ok) {
       return (wrappedPayload.data as T) ?? (null as T);
     }
-    const errorPayload = wrappedPayload.error as Record<string, unknown> | undefined;
+    const errorPayload = wrappedPayload.error as
+      Record<string, unknown> | undefined;
     throw new ApiError(
-      typeof errorPayload?.message === 'string' ? errorPayload.message : 'API request failed',
+      typeof errorPayload?.message === 'string'
+        ? errorPayload.message
+        : 'API request failed',
       400,
       typeof errorPayload?.code === 'string' ? errorPayload.code : undefined,
-      errorPayload?.details,
+      errorPayload?.details
     );
   }
 
   return payload as T;
 }
 
-export function handleApiError(error: unknown, fallbackMessage = 'Something went wrong') {
+export function handleApiError(
+  error: unknown,
+  fallbackMessage = 'Something went wrong'
+) {
   if (error instanceof ApiError) {
     return error;
   }
@@ -109,25 +138,46 @@ export function handleApiError(error: unknown, fallbackMessage = 'Something went
     const name = (error as Error & { name?: string }).name;
     const message = error.message || fallbackMessage;
     if (name === 'AbortError' || name === 'TimeoutError') {
-      return new ApiError('Server did not respond in time. Please try again.', 504);
+      return new ApiError(
+        'Server did not respond in time. Please try again.',
+        504
+      );
     }
     return new ApiError(message || fallbackMessage, 500);
   }
   return new ApiError(fallbackMessage, 500);
 }
 
-export async function apiRequest<T = unknown>(path: string, opts: RequestInit = {}) {
+export async function apiRequest<T = unknown>(
+  path: string,
+  opts: RequestInit = {}
+) {
   const url = buildUrl(path);
-  const headers = { ...DEFAULT_HEADERS, ...normalizeHeaders(opts.headers) } as Record<string, string>;
+  const headers = {
+    ...DEFAULT_HEADERS,
+    ...normalizeHeaders(opts.headers),
+  } as Record<string, string>;
   const res = await fetch(url, { ...opts, credentials: 'include', headers });
   return parseResponse<T>(res);
 }
 
 export const api = {
-  get: <T = unknown>(p: string, opts?: RequestInit) => apiRequest<T>(p, { method: 'GET', ...(opts ?? {}) }),
-  post: <T = unknown>(p: string, body?: unknown, opts?: RequestInit) => apiRequest<T>(p, { method: 'POST', body: body ? JSON.stringify(body) : undefined, ...(opts ?? {}) }),
-  put: <T = unknown>(p: string, body?: unknown, opts?: RequestInit) => apiRequest<T>(p, { method: 'PUT', body: body ? JSON.stringify(body) : undefined, ...(opts ?? {}) }),
-  del: <T = unknown>(p: string, opts?: RequestInit) => apiRequest<T>(p, { method: 'DELETE', ...(opts ?? {}) }),
+  get: <T = unknown>(p: string, opts?: RequestInit) =>
+    apiRequest<T>(p, { method: 'GET', ...(opts ?? {}) }),
+  post: <T = unknown>(p: string, body?: unknown, opts?: RequestInit) =>
+    apiRequest<T>(p, {
+      method: 'POST',
+      body: body ? JSON.stringify(body) : undefined,
+      ...(opts ?? {}),
+    }),
+  put: <T = unknown>(p: string, body?: unknown, opts?: RequestInit) =>
+    apiRequest<T>(p, {
+      method: 'PUT',
+      body: body ? JSON.stringify(body) : undefined,
+      ...(opts ?? {}),
+    }),
+  del: <T = unknown>(p: string, opts?: RequestInit) =>
+    apiRequest<T>(p, { method: 'DELETE', ...(opts ?? {}) }),
 };
 
 export default api;

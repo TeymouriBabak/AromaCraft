@@ -9,8 +9,12 @@ const connection = await mysql.createConnection({
 });
 
 await connection.execute('CREATE DATABASE IF NOT EXISTS aromacraft');
-await connection.execute("CREATE USER IF NOT EXISTS 'aromacraft_user'@'%' IDENTIFIED BY 'local_app_password'");
-await connection.execute("GRANT ALL PRIVILEGES ON aromacraft.* TO 'aromacraft_user'@'%'");
+await connection.execute(
+  "CREATE USER IF NOT EXISTS 'aromacraft_user'@'%' IDENTIFIED BY 'local_app_password'"
+);
+await connection.execute(
+  "GRANT ALL PRIVILEGES ON aromacraft.* TO 'aromacraft_user'@'%'"
+);
 await connection.execute('FLUSH PRIVILEGES');
 await connection.end();
 console.log('Local database initialized.');

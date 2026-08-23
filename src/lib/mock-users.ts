@@ -4,7 +4,12 @@
  */
 import { listMockUsers } from './fixtures/mock-users';
 
-export type DevUser = { id: string; username: string; email: string; role: string };
+export type DevUser = {
+  id: string;
+  username: string;
+  email: string;
+  role: string;
+};
 
 export function devListUsers(): DevUser[] {
   return listMockUsers().map((u) => ({

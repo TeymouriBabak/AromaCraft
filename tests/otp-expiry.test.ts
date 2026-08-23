@@ -14,17 +14,31 @@ function makeMockRes() {
   let statusCode = 200;
   let body: unknown = null;
   return {
-    status(code: number) { statusCode = code; return this; },
-    json(obj: unknown) { body = obj; return { statusCode, body }; },
-    setHeader() { return this; },
-    _get() { return { statusCode, body }; },
-  } as unknown as { status(code: number): unknown; json(obj: unknown): { statusCode: number; body: unknown }; _get(): { statusCode: number; body: unknown } };
+    status(code: number) {
+      statusCode = code;
+      return this;
+    },
+    json(obj: unknown) {
+      body = obj;
+      return { statusCode, body };
+    },
+    setHeader() {
+      return this;
+    },
+    _get() {
+      return { statusCode, body };
+    },
+  } as unknown as {
+    status(code: number): unknown;
+    json(obj: unknown): { statusCode: number; body: unknown };
+    _get(): { statusCode: number; body: unknown };
+  };
 }
 
 test('expired OTP is rejected', async () => {
   const email = `otp-expired-${Date.now()}@example.com`;
-  const uname = `otpexpired${randomUUID().slice(0,8)}`;
-  const mobile = `+1415${String(Date.now() % 100000).padStart(5,'0')}`;
+  const uname = `otpexpired${randomUUID().slice(0, 8)}`;
+  const mobile = `+1415${String(Date.now() % 100000).padStart(5, '0')}`;
   const user = await createDbUser({
     username: uname,
     email,
@@ -55,7 +69,10 @@ test('expired OTP is rejected', async () => {
   });
 
   const res = makeMockRes();
-  await handleVerifyAccount({ method: 'POST', body: { email, code } } as unknown as NextApiRequest, res as unknown as NextApiResponse);
+  await handleVerifyAccount(
+    { method: 'POST', body: { email, code } } as unknown as NextApiRequest,
+    res as unknown as NextApiResponse
+  );
   const out = res._get();
   assert.equal(out.statusCode, 401);
 });

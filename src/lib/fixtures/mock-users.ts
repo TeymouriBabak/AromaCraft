@@ -1,12 +1,12 @@
 /**
  * Test Fixtures & Mock Data
- * 
+ *
  * Central repository for ALL mock users, mock data, and test fixtures.
  * These are ONLY active when USE_MOCKS=true or NODE_ENV=development.
- * 
+ *
  * Production: Database is the single source of truth.
  * Development: Use fixtures for seeding and testing.
- * 
+ *
  * OCL Rule: Mock/Fixture Isolation
  */
 
@@ -26,7 +26,7 @@ export type MockUser = {
 
 /**
  * Mock users for development/seeding ONLY
- * 
+ *
  * WARNING: These are PLAINTEXT passwords for demo purposes only.
  * In production, all passwords are hashed via bcryptjs.
  */
@@ -57,18 +57,18 @@ export const MOCK_USERS: MockUser[] = devPassword
         lastName: 'Manager',
         mobile: '+1111111111',
         countryCode: '+1',
-        },
-        {
-          id: 'u_manager',
-          username: 'Manager_Aroma',
-          email: 'manager@aromacraft.test',
-          passwordHash: devPassword,
-          role: 'manager',
-          name: 'System Manager',
-          firstName: 'System',
-          lastName: 'Manager',
-          mobile: '+1222222222',
-          countryCode: '+1',
+      },
+      {
+        id: 'u_manager',
+        username: 'Manager_Aroma',
+        email: 'manager@aromacraft.test',
+        passwordHash: devPassword,
+        role: 'manager',
+        name: 'System Manager',
+        firstName: 'System',
+        lastName: 'Manager',
+        mobile: '+1222222222',
+        countryCode: '+1',
       },
       {
         id: 'u_manager_legacy',
@@ -94,7 +94,8 @@ export const MOCK_REVIEWS = [
     destination: 'home',
     title: 'Home',
     rating: 5,
-    content: 'A calm, confident experience from discovery to delivery. Everything feels premium and effortless.',
+    content:
+      'A calm, confident experience from discovery to delivery. Everything feels premium and effortless.',
     author: 'Amelia',
     createdAt: new Date().toISOString(),
   },
@@ -103,7 +104,8 @@ export const MOCK_REVIEWS = [
     destination: 'pike-place',
     title: 'Pike Place',
     rating: 5,
-    content: 'A luxurious daily ritual with the smoothness and consistency I want in a neighborhood coffee favorite.',
+    content:
+      'A luxurious daily ritual with the smoothness and consistency I want in a neighborhood coffee favorite.',
     author: 'Noah',
     createdAt: new Date().toISOString(),
   },

@@ -10,7 +10,8 @@ function bytesToHex(bytes: Uint8Array) {
 
 function genSessionId(length = 24) {
   // Try Web Crypto first (works in Edge runtime and modern Node)
-  const globalCrypto = typeof globalThis !== 'undefined' ? globalThis.crypto : undefined;
+  const globalCrypto =
+    typeof globalThis !== 'undefined' ? globalThis.crypto : undefined;
   if (globalCrypto && typeof globalCrypto.getRandomValues === 'function') {
     const bytes = new Uint8Array(length);
     globalCrypto.getRandomValues(bytes);
@@ -19,12 +20,18 @@ function genSessionId(length = 24) {
   // Fallback: use Math.random (not cryptographically secure, fine for dev)
   let result = '';
   for (let i = 0; i < length; i++) {
-    result += Math.floor(Math.random() * 256).toString(16).padStart(2, '0');
+    result += Math.floor(Math.random() * 256)
+      .toString(16)
+      .padStart(2, '0');
   }
   return result;
 }
 
-export function createSession(userId: string, ttlSeconds = 60 * 60 * 24 * 7, role?: string) {
+export function createSession(
+  userId: string,
+  ttlSeconds = 60 * 60 * 24 * 7,
+  role?: string
+) {
   const sessionId = genSessionId(24);
   const expiresAt = Date.now() + ttlSeconds * 1000;
   store.set(sessionId, { userId, role, expiresAt });

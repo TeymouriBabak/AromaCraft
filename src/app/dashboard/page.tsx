@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { useAuth } from "@/components/auth-context";
-import { motion } from "framer-motion";
-import { ArrowRight, Sparkles, ShieldCheck } from "lucide-react";
+import Link from 'next/link';
+import { useAuth } from '@/components/auth-context';
+import { motion } from 'framer-motion';
+import { ArrowRight, Sparkles, ShieldCheck } from 'lucide-react';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -13,7 +13,8 @@ export default function DashboardPage() {
     <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
       {!isVerified ? (
         <div className="mb-6 rounded-2xl border border-[#d4a373]/20 bg-[#fff9f3] px-4 py-3 text-sm text-[#6e4b33] dark:bg-[#22110c] dark:text-[#f6e5d1]">
-          Your email is pending verification. Check your inbox for the secure verification code to unlock full dashboard access.
+          Your email is pending verification. Check your inbox for the secure
+          verification code to unlock full dashboard access.
         </div>
       ) : (
         <div className="mb-6 flex items-center gap-2 rounded-2xl border border-[#2f7d4a]/20 bg-[#f1fbf5] px-4 py-3 text-sm text-[#2f7d4a] dark:bg-[#122a1b] dark:text-[#bfe7c9]">
@@ -32,13 +33,17 @@ export default function DashboardPage() {
               <ShieldCheck size={16} /> Secure dashboard
             </p>
             <h1 className="mt-4 font-serif text-4xl text-[#1a0f0a] dark:text-[#f6e5d1]">
-              Welcome back, {user?.firstName || "friend"}.
+              Welcome back, {user?.firstName || 'friend'}.
             </h1>
             <p className="mt-3 max-w-2xl text-lg text-[#6e4b33] dark:text-[#e8d8c0]">
-              Your account is verified and ready for a more personal AromaCraft experience.
+              Your account is verified and ready for a more personal AromaCraft
+              experience.
             </p>
           </div>
-          <Link href="/shop" className="inline-flex items-center gap-2 rounded-full bg-[#1a0f0a] px-4 py-3 font-semibold text-white">
+          <Link
+            href="/shop"
+            className="inline-flex items-center gap-2 rounded-full bg-[#1a0f0a] px-4 py-3 font-semibold text-white"
+          >
             Explore roasts
             <ArrowRight size={16} />
           </Link>
@@ -46,16 +51,32 @@ export default function DashboardPage() {
 
         <div className="mt-8 grid gap-4 md:grid-cols-3">
           {[
-            { title: "Verified account", text: "Your email is secure and confirmed." },
-            { title: "Saved favorites", text: "Keep your go-to coffees close at hand." },
-            { title: "Exclusive access", text: "Member-only offers arrive here first." },
+            {
+              title: 'Verified account',
+              text: 'Your email is secure and confirmed.',
+            },
+            {
+              title: 'Saved favorites',
+              text: 'Keep your go-to coffees close at hand.',
+            },
+            {
+              title: 'Exclusive access',
+              text: 'Member-only offers arrive here first.',
+            },
           ].map((item) => (
-            <div key={item.title} className="rounded-[1.25rem] border border-[#d4a373]/20 bg-white/70 p-5 dark:bg-[#29130d]">
+            <div
+              key={item.title}
+              className="rounded-[1.25rem] border border-[#d4a373]/20 bg-white/70 p-5 dark:bg-[#29130d]"
+            >
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1a0f0a] text-[#f9f6f0]">
                 <Sparkles size={16} />
               </div>
-              <h2 className="mt-4 font-semibold text-[#1a0f0a] dark:text-[#f6e5d1]">{item.title}</h2>
-              <p className="mt-2 text-sm text-[#6e4b33] dark:text-[#e8d8c0]">{item.text}</p>
+              <h2 className="mt-4 font-semibold text-[#1a0f0a] dark:text-[#f6e5d1]">
+                {item.title}
+              </h2>
+              <p className="mt-2 text-sm text-[#6e4b33] dark:text-[#e8d8c0]">
+                {item.text}
+              </p>
             </div>
           ))}
         </div>
