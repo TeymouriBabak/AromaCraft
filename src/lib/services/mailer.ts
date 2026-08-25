@@ -38,3 +38,28 @@ export async function sendVerificationEmail(to: string, token: string) {
 }
 
 export default sendVerificationEmail;
+export async function sendPasswordResetEmail(
+  to: string,
+  resetUrl: string
+): Promise<boolean> {
+  try {
+    await provider.sendEmail(
+      to,
+      'AromaCraft — Reset your password',
+      `
+        <div style="font-family:sans-serif;max-width:480px;margin:0 auto">
+          <h2>Password Reset</h2>
+          <p>We received a request to reset your password. This link is valid for 15 minutes:</p>
+          <p><a href="${resetUrl}" style="background:#6f4e37;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none">Reset Password</a></p>
+          <p>If you did not request this, you can safely ignore this email.</p>
+        </div>
+      `,
+      `Reset your password (valid 15 minutes): ${resetUrl}`
+    );
+    return true;
+  } catch (error) {
+    console.error('[mailer] error sending password reset email', error);
+    return false;
+  }
+}
+

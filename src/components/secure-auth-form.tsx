@@ -92,7 +92,7 @@ export default function SecureAuthForm({
   const searchParams = useSearchParams();
   const callbackUrl = searchParams?.get('callbackUrl') ?? undefined;
   const shouldReduceMotion = useReducedMotion();
-  const { login, signup, resendVerificationCode, verifyAccount } = useAuth();
+  const { login, signup, verifyAccount, resendVerificationCode, verifyLogin } = useAuth();
   const [view, setView] = useState<AuthView>('login');
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [showForgotUsernameModal, setShowForgotUsernameModal] = useState(false);
@@ -106,6 +106,8 @@ export default function SecureAuthForm({
     text: string;
   } | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarReady, setAvatarReady] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [submitState, setSubmitState] = useState<
     'idle' | 'loading' | 'success'
@@ -116,6 +118,10 @@ export default function SecureAuthForm({
   const [pendingEmail, setPendingEmail] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [verificationError, setVerificationError] = useState('');
+  const [loginStep, setLoginStep] = useState<'form' | 'otp'>('form');
+  const [loginOtpCode, setLoginOtpCode] = useState('');
+  const [loginOtpError, setLoginOtpError] = useState('');
+  const [pendingLoginUsername, setPendingLoginUsername] = useState('');
   const [usernameStatus, setUsernameStatus] =
     useState<AvailabilityState>('idle');
   const [emailStatus, setEmailStatus] = useState<AvailabilityState>('idle');
@@ -373,33 +379,107 @@ export default function SecureAuthForm({
     setSubmitState('loading');
     setIsSubmitting(true);
     setMessage(null);
-    const result = await login(values.identifier, values.password, values.role);
-    await new Promise((resolve) => window.setTimeout(resolve, 650));
-    setMessage({
-      type: result.success ? 'success' : 'error',
-      text: result.message,
-    });
-    setSubmitState(result.success ? 'success' : 'idle');
-    setIsSubmitting(false);
-    if (result.success) {
-      const nextPath =
-        callbackUrl && callbackUrl.startsWith('/')
-          ? callbackUrl
-          : result.role === 'manager'
-            ? '/dashboard/manager'
-            : result.role === 'admin'
-              ? '/dashboard/admin'
-              : '/dashboard/customer';
 
-      if (onAuthenticated) {
-        try {
-          onAuthenticated(result.role);
-        } catch {
-          // ignore
-        }
+    try {
+      const result = await login(values.identifier, values.password, values.role);
+
+      if (result.requiresOtp) {
+        setPendingLoginUsername(values.identifier);
+        setLoginStep('otp');
+        setMessage({
+          type: 'success',
+          text: result.message,
+        });
+        setSubmitState('success');
+        setIsSubmitting(false);
+        return;
       }
 
-      router.replace(nextPath);
+      await new Promise((resolve) => window.setTimeout(resolve, 650));
+      setMessage({
+        type: result.success ? 'success' : 'error',
+        text: result.message,
+      });
+      setSubmitState(result.success ? 'success' : 'idle');
+      if (result.success) {
+        const nextPath =
+          callbackUrl && callbackUrl.startsWith('/')
+            ? callbackUrl
+            : result.role === 'manager'
+              ? '/dashboard/manager'
+              : result.role === 'admin'
+                ? '/dashboard/admin'
+                : '/dashboard/customer';
+
+        if (onAuthenticated) {
+          try {
+            onAuthenticated(result.role);
+          } catch {
+            // ignore
+          }
+        }
+
+        router.replace(nextPath);
+      }
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Login failed',
+      });
+      setSubmitState('idle');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleLoginOtpVerify = async () => {
+    if (!/^\d{6}$/.test(loginOtpCode)) {
+      setLoginOtpError('Enter the 6-digit code.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setLoginOtpError('');
+    setMessage(null);
+
+    try {
+      const result = await verifyLogin(pendingLoginUsername, loginOtpCode);
+
+      if (result.success) {
+        setSubmitState('success');
+        setMessage({
+          type: 'success',
+          text: result.message,
+        });
+
+        const nextPath =
+          callbackUrl && callbackUrl.startsWith('/')
+            ? callbackUrl
+            : result.role === 'manager'
+              ? '/dashboard/manager'
+              : result.role === 'admin'
+                ? '/dashboard/admin'
+                : '/dashboard/customer';
+
+        if (onAuthenticated) {
+          try {
+            onAuthenticated(result.role);
+          } catch {
+            // ignore
+          }
+        }
+
+        router.replace(nextPath);
+        return;
+      }
+
+      setLoginOtpError(result.message || 'Invalid or expired verification code.');
+    } catch (error) {
+      setLoginOtpError(
+        error instanceof Error ? error.message : 'Verification failed. Please try again.'
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -432,7 +512,9 @@ export default function SecureAuthForm({
     try {
       const result = await signup({
         ...values,
-        avatarUrl: values.avatarUrl || undefined,
+        // Send the phone in the same normalized E.164 form the server expects
+        mobile: normalizePhoneNumber(values.mobile),
+        avatarUrl: values.avatarUrl,
       });
       await new Promise((resolve) => window.setTimeout(resolve, 800));
       if (result.success) {
@@ -458,7 +540,7 @@ export default function SecureAuthForm({
       setIsSubmitting(false);
     }
   };
-
+  
   const handleVerify = async () => {
     if (!/^\d{6}$/.test(verificationCode)) {
       setVerificationError('Enter the exact 6-digit verification code.');
@@ -504,41 +586,54 @@ export default function SecureAuthForm({
     setIsSubmitting(false);
   };
 
-  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const uploadAvatar = async (file: File) => {
+  const previewUrl = URL.createObjectURL(file);
+  setAvatarReady(false);
+  setAvatarPreview(previewUrl);
+  setAvatarUploading(true);
 
-    const previewUrl = URL.createObjectURL(file);
-    setAvatarPreview(previewUrl);
+  const controller = new AbortController();
+  const to = window.setTimeout(
+    () => controller.abort(new DOMException('timeout', 'TimeoutError')),
+    15000
+  );
 
-    (async () => {
-      try {
-        const formData = new FormData();
-        formData.append('avatar', file);
+  try {
+    const formData = new FormData();
+    formData.append('avatar', file);
 
-        const controller = new AbortController();
-        const to = window.setTimeout(
-          () => controller.abort(new DOMException('timeout', 'TimeoutError')),
-          15000
-        );
-        const resp = await fetch('/api/auth/upload-avatar', {
-          method: 'POST',
-          body: formData,
-          signal: controller.signal,
-        });
-        clearTimeout(to);
-        const json = await resp.json();
-        if (json?.ok && json.data && json.data.url) {
-          setAvatarPreview(json.data.url);
-          setSignupValue('avatarUrl', json.data.url);
-        } else {
-          setSignupValue('avatarUrl', '');
-        }
-      } catch {
-        setSignupValue('avatarUrl', '');
-      }
-    })();
-  };
+    const resp = await fetch('/api/auth/upload-avatar', {
+      method: 'POST',
+      body: formData,
+      signal: controller.signal,
+    });
+    const json = await resp.json();
+
+    if (json?.ok && json.data?.url) {
+      setAvatarPreview(json.data.url);
+      setSignupValue('avatarUrl', json.data.url, {
+        shouldValidate: true,
+        shouldDirty: true,
+      });
+    } else {
+      setSignupValue('avatarUrl', '', { shouldValidate: true });
+    }
+  } catch {
+    setSignupValue('avatarUrl', '', { shouldValidate: true });
+  } finally {
+    clearTimeout(to);
+    setAvatarUploading(false);
+  }
+};
+
+
+  const handleAvatarChange = (
+  event: React.ChangeEvent<HTMLInputElement>
+) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  void uploadAvatar(file);
+};
 
   const renderMessage = () => {
     if (!message) return null;
@@ -617,6 +712,10 @@ export default function SecureAuthForm({
                   setSubmitState('idle');
                   setVerificationStep('form');
                   setVerificationError('');
+                  setLoginStep('form');
+                  setLoginOtpCode('');
+                  setLoginOtpError('');
+                  setPendingLoginUsername('');
                 }}
                 className={`relative z-10 flex-1 rounded-full px-4 py-2 text-sm font-semibold transition-colors duration-200 ${view === tab.id ? 'text-[#f9f6f0] dark:text-[#1a0f0a]' : 'text-[#6e4b33] dark:text-[#f6e5d1]'}`}
               >
@@ -626,7 +725,7 @@ export default function SecureAuthForm({
           </div>
 
           <AnimatePresence mode="wait">
-            {view === 'login' && verificationStep === 'form' ? (
+            {view === 'login' && loginStep === 'form' && verificationStep === 'form' ? (
               <motion.div
                 key="login-view"
                 initial={shouldReduceMotion ? false : { opacity: 0, y: 12 }}
@@ -804,6 +903,89 @@ export default function SecureAuthForm({
                     )}
                   </motion.button>
                 </form>
+              </motion.div>
+            ) : view === 'login' && loginStep === 'otp' && verificationStep === 'form' ? (
+              <motion.div
+                key="login-otp-view"
+                initial={shouldReduceMotion ? false : { opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={
+                  shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -10 }
+                }
+                transition={{ duration: 0.28 }}
+                className="mt-6 space-y-4"
+              >
+                <div className="rounded-[1.25rem] border border-[#d4a373]/20 bg-[#f9f6f0] p-4 dark:bg-[#23110c]">
+                  <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[#b56e3b]">
+                    Two-factor verification
+                  </p>
+                  <p className="mt-2 text-sm text-[#6e4b33] dark:text-[#e8d8c0]">
+                    We sent a verification code for{' '}
+                    <span className="font-semibold">{pendingLoginUsername}</span>.
+                    Enter the 6-digit code to finish signing in.
+                  </p>
+                </div>
+
+                <div>
+                  <label
+                    className="mb-2 block text-sm font-semibold text-[#3d2d24] dark:text-[#f6e5d1]"
+                    htmlFor="login-otp-code"
+                  >
+                    Verification code
+                  </label>
+                  <OtpInput
+                    value={loginOtpCode}
+                    onChange={(value) => {
+                      setLoginOtpCode(value);
+                      if (loginOtpError) setLoginOtpError('');
+                    }}
+                    error={Boolean(loginOtpError)}
+                  />
+                  {loginOtpError ? (
+                    <p className="mt-2 text-sm text-[#e76f51]">{loginOtpError}</p>
+                  ) : null}
+                </div>
+
+                {renderMessage()}
+                <motion.button
+                  type="button"
+                  onClick={handleLoginOtpVerify}
+                  whileHover={
+                    shouldReduceMotion ? undefined : { y: -2, scale: 1.01 }
+                  }
+                  whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
+                  disabled={isSubmitting || loginOtpCode.length !== 6}
+                  className="flex w-full items-center justify-center rounded-full bg-[#1a0f0a] px-4 py-3 font-semibold text-white transition disabled:cursor-not-allowed disabled:bg-[#c7b39a]"
+                >
+                  {isSubmitting || loginSubmitting ? (
+                    <span className="flex items-center gap-2">
+                      <LoaderCircle size={16} className="animate-spin" />
+                      Verifying...
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      Verify &amp; sign in
+                      <ArrowRight size={16} />
+                    </span>
+                  )}
+                </motion.button>
+
+                <div className="flex items-center justify-between text-sm">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLoginStep('form');
+                      setLoginOtpCode('');
+                      setLoginOtpError('');
+                      setSubmitState('idle');
+                      setPendingLoginUsername('');
+                      setMessage(null);
+                    }}
+                    className="font-medium text-[#b56e3b]"
+                  >
+                    Back to sign in
+                  </button>
+                </div>
               </motion.div>
             ) : view === 'signup' && verificationStep === 'form' ? (
               <motion.div
@@ -1169,10 +1351,10 @@ export default function SecureAuthForm({
                         )}
                       </button>
                     </div>
-                    {signupErrors.confirmPassword ? (
-                      <p className="mt-2 text-sm text-[#e76f51]">
-                        {signupErrors.confirmPassword.message}
-                      </p>
+                    {signupErrors.confirmPassword && confirmPasswordState !== 'mismatch' ? (
+                       <p className="mt-2 text-sm text-[#e76f51]">
+                         {signupErrors.confirmPassword.message}
+                       </p>
                     ) : null}
                     {confirmPasswordState === 'match' ? (
                       <p className="mt-2 flex items-center gap-2 text-sm text-[#2f7d4a]">
@@ -1191,7 +1373,7 @@ export default function SecureAuthForm({
                       className="mb-2 flex items-center gap-2 text-sm font-semibold tracking-[0.14em] text-[#3d2d24] dark:text-[#f6e5d1]"
                       htmlFor="avatar-url"
                     >
-                      <Camera size={16} /> Profile photo (optional)
+                      <Camera size={16} /> Profile photo (required)
                     </label>
                     <motion.label
                       htmlFor="avatar-url"
@@ -1201,48 +1383,13 @@ export default function SecureAuthForm({
                       }}
                       onDragLeave={() => setDragActive(false)}
                       onDrop={(event) => {
-                        event.preventDefault();
-                        setDragActive(false);
-                        const file = event.dataTransfer.files?.[0];
-                        if (!file) return;
+  event.preventDefault();
+  setDragActive(false);
+  const file = event.dataTransfer.files?.[0];
+  if (!file) return;
+  void uploadAvatar(file);
+}}
 
-                        const previewUrl = URL.createObjectURL(file);
-                        setAvatarPreview(previewUrl);
-
-                        (async () => {
-                          try {
-                            const formData = new FormData();
-                            formData.append('avatar', file);
-
-                            const controller = new AbortController();
-                            const to = window.setTimeout(
-                              () =>
-                                controller.abort(
-                                  new DOMException('timeout', 'TimeoutError')
-                                ),
-                              15000
-                            );
-                            const resp = await fetch(
-                              '/api/auth/upload-avatar',
-                              {
-                                method: 'POST',
-                                body: formData,
-                                signal: controller.signal,
-                              }
-                            );
-                            clearTimeout(to);
-                            const json = await resp.json();
-                            if (json?.ok && json.data && json.data.url) {
-                              setAvatarPreview(json.data.url);
-                              setSignupValue('avatarUrl', json.data.url);
-                            } else {
-                              setSignupValue('avatarUrl', '');
-                            }
-                          } catch {
-                            setSignupValue('avatarUrl', '');
-                          }
-                        })();
-                      }}
                       className={`flex cursor-pointer items-center justify-center gap-3 rounded-[1.4rem] border border-dashed px-4 py-5 text-center transition-all duration-200 ${dragActive ? 'border-[#c9854d] bg-[#f7ebdb] shadow-[0_10px_24px_-18px_rgba(43,29,23,0.35)]' : 'border-[#d4a373]/30 bg-[#f9f6f0]/90 dark:bg-[#23110c]'}`}
                     >
                       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#1a0f0a] text-[#f9f6f0]">
@@ -1278,6 +1425,11 @@ export default function SecureAuthForm({
                             height={56}
                             unoptimized
                             className="h-full w-full object-cover"
+                            onLoad={() => {
+                               if (avatarPreview && !avatarPreview.startsWith('blob:'))
+                                 setAvatarReady(true);
+                               }}
+                             onError={() => setAvatarReady(false)}
                           />
                         </div>
                         <p className="text-sm text-[#6e4b33] dark:text-[#e8d8c0]">
@@ -1285,6 +1437,11 @@ export default function SecureAuthForm({
                         </p>
                       </motion.div>
                     ) : null}
+                    {signupErrors.avatarUrl && (
+                      <p className="mt-2 flex items-center gap-2 text-sm text-[#e76f51]">
+                        <X size={14} /> {signupErrors.avatarUrl.message}
+                      </p>
+                    )}
                   </div>
 
                   {renderMessage()}
@@ -1295,8 +1452,12 @@ export default function SecureAuthForm({
                     }
                     whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
                     disabled={
-                      isSubmitting || signupSubmitting || !isSignupReady
-                    }
+                       isSubmitting ||
+                       signupSubmitting ||
+                      !isSignupReady ||
+                      avatarUploading ||
+                      !avatarReady
+                    } 
                     className="flex w-full items-center justify-center rounded-full bg-[#e76f51] px-4 py-3 font-semibold text-white transition disabled:cursor-not-allowed disabled:bg-[#c7b39a]"
                   >
                     {isSubmitting ? (

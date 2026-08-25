@@ -1,9 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import fs from 'fs';
+import path from 'path';
 import { validateMethod, jsonError, jsonSuccess } from '@/lib/api-utils';
 import { randomUUID } from 'crypto';
 import { getStorageProvider } from '@/lib/providers/factory';
 import { parseSession } from '@/lib/auth-utils';
 import { checkRateLimit, RATE_LIMIT_CONFIG } from '@/lib/redis';
+
 
 const MAX_AVATAR_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
@@ -68,8 +71,27 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const methodError = validateMethod(req, res, ['POST']);
+  const methodError = validateMethod(req, res, ['GET', 'POST']);
   if (methodError) return methodError;
+  if (req.method === 'GET') {
+  const f = req.query.f;
+  if (typeof f !== 'string' || !/^[a-f0-9-]+\.(jpe?g|png|webp)$/i.test(f)) {
+    return jsonError(res, 'invalid_request', 'Invalid filename.', 400);
+  }
+  const filePath = path.join(process.cwd(), 'public', 'uploads', 'avatars', f);
+  if (!fs.existsSync(filePath)) {
+    return jsonError(res, 'not_found', 'Avatar not found.', 404);
+  }
+  const mime: Record<string, string> = {
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.png': 'image/png',
+    '.webp': 'image/webp',
+  };
+  res.setHeader('Content-Type', mime[path.extname(f).toLowerCase()] ?? 'application/octet-stream');
+  res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  return res.send(fs.readFileSync(filePath));
+  }
 
   // Allow anonymous uploads for signup flows, but enforce rate limiting to prevent abuse.
   // Use parseSession (non-mutating) to detect if a session exists without sending a 401 response.
@@ -117,7 +139,7 @@ export default async function handler(
         400
       );
 
-    const { file, mimeType, filename } = part;
+        const { file, mimeType } = part;
     if (!ALLOWED_MIME_TYPES.includes(mimeType)) {
       return jsonError(
         res,
@@ -136,14 +158,16 @@ export default async function handler(
       );
     }
 
-    const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const ext = safeName.includes('.')
-      ? safeName.slice(safeName.lastIndexOf('.') + 1)
-      : 'png';
+        const extByMime: Record<string, string> = {
+      'image/png': 'png',
+      'image/jpeg': 'jpg',
+      'image/webp': 'webp',
+    };
+    const ext = extByMime[mimeType];
     const provider = getStorageProvider();
-    const storagePath = `avatars/${randomUUID()}.${ext}`;
-    const publicUrl = await provider.saveFile(storagePath, file, mimeType);
-    return jsonSuccess(res, { url: publicUrl }, 201);
+    const fileName = `${randomUUID()}.${ext}`;
+    await provider.saveFile(`avatars/${fileName}`, file, mimeType);
+    return jsonSuccess(res, { url: `/api/auth/upload-avatar?f=${fileName}` }, 201);
   } catch {
     return jsonError(res, 'server_error', 'Unable to store avatar image.', 500);
   }

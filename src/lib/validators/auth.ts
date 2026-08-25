@@ -83,7 +83,15 @@ export const signupSchema = z
       .regex(/\d/, 'Password needs a number.')
       .regex(/[^A-Za-z0-9]/, 'Password needs a special character.'),
     confirmPassword: z.string().trim().min(1, 'Please confirm your password.'),
-    avatarUrl: z.string().url('Avatar must be a valid URL.').optional(),
+    // Accept absolute http(s) URLs or app-relative upload paths like /uploads/avatar.png
+    avatarUrl: z
+      .string()
+      .trim()
+      .refine(
+        (value) => value.startsWith('/') || /^https?:\/\//i.test(value),
+        'Avatar must be a valid URL.'
+      )
+      .optional(),
   })
   .superRefine(({ password, confirmPassword }, ctx) => {
     if (password !== confirmPassword) {
@@ -173,6 +181,9 @@ export type ResendVerificationPayload = z.infer<
  * Step 2 of two-step login: OTP sent via SMS after password check
  */
 export const verifyLoginSchema = z.object({
+  loginMode: z.enum(['email', 'username']).optional(),
+  role: z.enum(['customer', 'admin', 'manager']).optional(),
+  challengeId: z.string().trim().min(1).optional(),
   identifier: z
     .string()
     .trim()

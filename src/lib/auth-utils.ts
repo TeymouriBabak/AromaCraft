@@ -744,6 +744,14 @@ function handleAuthServerError(res: NextApiResponse, error: unknown) {
   );
 }
 
+function maskMobile(mobile?: string | null): string | undefined {
+  if (!mobile) return undefined;
+  const digits = String(mobile).replace(/\D/g, '');
+  if (digits.length < 4) return '****';
+  return `••••••${digits.slice(-4)}`;
+}
+
+
 export async function handleLogin(req: NextApiRequest, res: NextApiResponse) {
   const methodError = validateMethod(req, res, ['POST']);
   if (methodError) return methodError;
@@ -819,35 +827,100 @@ export async function handleLogin(req: NextApiRequest, res: NextApiResponse) {
       );
     }
 
-    const dbSession = await createDbSession(user.id, SESSION_TTL_SECONDS).catch(
-      () => null
+        // Two-step login: instead of creating a session here, issue a LOGIN_OTP
+    // (delivered by SMS) and require the client to confirm it via verify-login.
+    try {
+      await invalidateExistingVerificationTokens(user.id, 'LOGIN_OTP');
+    } catch (err) {
+      void err;
+    }
+
+    const loginCode = generateOtp();
+    const createdLoginToken = await createVerificationToken(
+      user.id,
+      'LOGIN_OTP',
+      loginCode
     );
-    if (!dbSession) {
+    const challengeId =
+      createdLoginToken &&
+      typeof createdLoginToken === 'object' &&
+      'id' in createdLoginToken
+        ? String((createdLoginToken as Record<string, unknown>).id)
+        : null;
+
+    if (!challengeId) {
       return jsonError(
         res,
-        'session_error',
-        'Unable to create a database session.',
+        'server_error',
+        'Unable to create login challenge.',
         500
       );
     }
 
-    await setSessionCookie(
-      res,
-      dbSession.token,
-      Math.floor((dbSession.expiresAt.getTime() - Date.now()) / 1000),
-      { id: user.id, role: user.role }
-    );
+    // Development retrieval by email (mirrors signup/resend behavior)
+    if (
+      process.env.USE_MOCKS === 'true' ||
+      process.env.NODE_ENV !== 'production'
+    ) {
+      mockOtpByEmail.set(user.email.trim().toLowerCase(), {
+        type: 'LOGIN_OTP',
+        otp: loginCode,
+        expiresAt: new Date(Date.now() + VERIFICATION_TTL_MS),
+      });
+    }
+
+    const userMobile = 'mobile' in user ? user.mobile : undefined;
+    if (userMobile) {
+      try {
+        const okSms = await sendVerificationSMS(userMobile, loginCode);
+        if (!okSms) {
+          console.error(
+            '[login] sendVerificationSMS returned false for',
+            userMobile
+          );
+          return jsonError(
+            res,
+            'sms_send_failed',
+            'Unable to send login code SMS.',
+            502
+          );
+        }
+      } catch (err) {
+        console.error(
+          '[login] sendVerificationSMS error:',
+          err instanceof Error ? err.message : String(err)
+        );
+        return jsonError(
+          res,
+          'sms_send_failed',
+          'Unable to send login code SMS.',
+          502
+        );
+      }
+    }
+
     await logUserActivity(
       user.id,
-      'login',
+      'login_otp_sent',
       { method: 'email_or_username', username: user.username },
-      { durationMs: 0, sessionId: dbSession.sessionId }
+      { sessionId: null }
     );
-    return jsonSuccess(res, { user: makePublicUser(user) }, 200);
+
+    return jsonSuccess(
+      res,
+      {
+        requiresOtp: true,
+        challengeId,
+        identifier: body.identifier,
+        maskedMobile: maskMobile(userMobile),
+      },
+      200
+    );
   } catch (error) {
     return handleAuthServerError(res, error);
   }
 }
+
 
 export async function handleResendVerification(
   req: NextApiRequest,
@@ -1006,6 +1079,169 @@ export async function handleResendVerification(
   );
 }
 
+async function findUserForLoginOtp(identifier: string) {
+  const trimmed = identifier.trim();
+  const norm = trimmed.toLowerCase();
+
+  let dbUser = null;
+  try {
+    dbUser =
+      (await findDbUserByEmail(norm)) ?? (await findDbUserByUsername(trimmed));
+  } catch (err) {
+    console.error(
+      '[verify-login] user lookup error:',
+      err instanceof Error ? err.message : String(err)
+    );
+    dbUser = null;
+  }
+  if (dbUser) return dbUser;
+
+  const allowMocks =
+    process.env.USE_MOCKS === 'true' && process.env.NODE_ENV !== 'production';
+  if (!allowMocks) return null;
+
+  return findMockUserByEmail(norm) || findMockUserByUsername(trimmed) || null;
+}
+
+export async function handleVerifyLogin(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  const methodError = validateMethod(req, res, ['POST']);
+  if (methodError) return methodError;
+
+  try {
+    const { checkRateLimit, RATE_LIMIT_CONFIG } = await import('@/lib/redis');
+    const ip =
+      req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    const allowed = await checkRateLimit(
+      `verify-login:${ip}`,
+      RATE_LIMIT_CONFIG.LOGIN.limit,
+      RATE_LIMIT_CONFIG.LOGIN.windowSeconds
+    );
+    if (!allowed) {
+      return jsonError(
+        res,
+        'rate_limited',
+        'Too many attempts. Try later.',
+        429
+      );
+    }
+  } catch (err) {
+    if (
+      process.env.NODE_ENV === 'production' ||
+      process.env.NODE_ENV === 'test'
+    ) {
+      return jsonError(
+        res,
+        'rate_limiter_unavailable',
+        'Rate limiting unavailable. Try again later.',
+        503
+      );
+    }
+    console.warn(
+      '[verify-login] Redis check unavailable, continuing in dev mode',
+      err instanceof Error ? err.message : String(err)
+    );
+  }
+
+  try {
+    const body = parseJsonBody<{
+      identifier?: string;
+      otp?: string;
+      role?: string;
+    }>(req);
+
+    if (!body || !body.identifier || !body.otp) {
+      return jsonError(
+        res,
+        'invalid_request',
+        'Identifier and OTP are required.',
+        400
+      );
+    }
+
+    const otp = body.otp.trim();
+    const user = await findUserForLoginOtp(body.identifier);
+
+    if (!user) {
+      return jsonError(
+        res,
+        'invalid_verification',
+        'The code is invalid or has expired.',
+        401
+      );
+    }
+
+    if (body.role) {
+      const requestedRole = String(body.role).trim().toLowerCase();
+      if (requestedRole !== String(user.role).toLowerCase()) {
+        return jsonError(
+          res,
+          'forbidden',
+          'Invalid credentials or access denied.',
+          403
+        );
+      }
+    }
+
+    const verificationToken = await findValidVerificationTokenByEmail(
+      user.email,
+      'LOGIN_OTP',
+      otp
+    );
+
+    if (!verificationToken) {
+      return jsonError(
+        res,
+        'invalid_verification',
+        'The code is invalid or has expired.',
+        401
+      );
+    }
+
+    const consumed = await markTokenUsed(String(verificationToken.id));
+    if (!consumed) {
+      return jsonError(
+        res,
+        'invalid_verification',
+        'The code has already been used.',
+        401
+      );
+    }
+
+    const dbSession = await createDbSession(user.id, SESSION_TTL_SECONDS).catch(
+      () => null
+    );
+    if (!dbSession) {
+      return jsonError(
+        res,
+        'session_error',
+        'Unable to create a database session.',
+        500
+      );
+    }
+
+    await setSessionCookie(
+      res,
+      dbSession.token,
+      Math.floor((dbSession.expiresAt.getTime() - Date.now()) / 1000),
+      user
+    );
+
+    await logUserActivity(
+      user.id,
+      'login',
+      { method: 'login_otp', username: user.username },
+      { durationMs: 0, sessionId: dbSession.sessionId }
+    );
+
+    return jsonSuccess(res, { user: makePublicUser(user) }, 200);
+  } catch (error) {
+    return handleAuthServerError(res, error);
+  }
+}
+
 export async function handleSignup(req: NextApiRequest, res: NextApiResponse) {
   const methodError = validateMethod(req, res, ['POST']);
   if (methodError) return methodError;
@@ -1049,6 +1285,9 @@ export async function handleSignup(req: NextApiRequest, res: NextApiResponse) {
       verificationCode?: string;
     }>(req);
 
+    // Temporary debug log for the signup request received by the server
+    console.error('[signup] request body:', body);
+
     if (!body) {
       return jsonError(
         res,
@@ -1063,7 +1302,8 @@ export async function handleSignup(req: NextApiRequest, res: NextApiResponse) {
     const gender = body.gender?.trim();
     const username = body.username?.trim();
     const mobile = body.mobile?.trim();
-    const email = body.email?.trim().toLowerCase();
+    // Keep the email exactly as typed; the DB unique index is case-insensitive.
+    const email = body.email?.trim();
     const password = body.password?.trim();
     const avatarUrl = body.avatarUrl?.trim() || undefined;
 
@@ -1080,6 +1320,15 @@ export async function handleSignup(req: NextApiRequest, res: NextApiResponse) {
         res,
         'invalid_request',
         'Please complete every required field.',
+        400
+      );
+    }
+    // Reject signup when no profile photo was uploaded
+    if (!avatarUrl || typeof avatarUrl !== 'string' || avatarUrl.trim() === '') {
+      return jsonError(
+        res,
+        'invalid_request',
+        'Please upload a profile photo.',
         400
       );
     }
@@ -1451,6 +1700,7 @@ const _exported = {
   clearSessionCookie,
   authenticateCredentials,
   handleLogin,
+  handleVerifyLogin,
   handleLogout,
   handleMe,
   handleResendVerification,

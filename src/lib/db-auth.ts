@@ -121,8 +121,10 @@ export async function createDbUser(userData: {
   avatarUrl?: string | null;
 }) {
   const passwordHash = await hash(userData.password, 12);
-  const normalizedEmail = normalizeIdentifier(userData.email);
-  const normalizedUsername = normalizeIdentifier(userData.username);
+  // Preserve the exact case the user typed. Uniqueness is still enforced by the
+  // case-insensitive collation on the username/email unique indexes.
+  const normalizedEmail = userData.email.trim();
+  const normalizedUsername = userData.username.trim();
   const roleValue = userData.role
     ? (userData.role.toUpperCase() as UserRole)
     : 'CUSTOMER';

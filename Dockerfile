@@ -52,8 +52,13 @@ COPY --from=builder /usr/src/app/prisma ./prisma
 COPY --from=builder /usr/src/app/src/generated/prisma ./src/generated/prisma
 COPY --from=builder /usr/src/app/package.json ./package.json
 
-# Ensure correct ownership and minimal permissions
-RUN chown -R appuser:appuser /usr/src/app && chmod -R 0755 /usr/src/app
+# Create the uploads directory so the mounted named volume inherits appuser
+# ownership; otherwise the nonip and minimal permissions
+# Create the uploads directory inside the image so the mounted named volume
+# inherits appuser ownership instead of defaulting to root.
+RUN mkdir -p /usr/src/app/public/uploads/avatars && \
+    chown -R appuser:appuser /usr/src/app && \
+    chmod -R 0755 /usr/src/app
 USER appuser
 
 EXPOSE 3000

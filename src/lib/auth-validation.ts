@@ -20,7 +20,7 @@ export type SignupFormValues = {
   email: string;
   password: string;
   confirmPassword: string;
-  avatarUrl?: string;
+  avatarUrl: string;
 };
 
 export const loginSchema = z.object({
@@ -52,7 +52,11 @@ export const signupSchema = z
       .regex(/\d/, 'Password needs a number.')
       .regex(/[^A-Za-z0-9]/, 'Password needs a special character.'),
     confirmPassword: z.string().trim().min(1, 'Please confirm your password.'),
-    avatarUrl: z.string().optional(),
+    // Profile photo is now required for signup
+    avatarUrl: z
+      .string()
+      .trim()
+      .min(1, 'Please upload a profile photo.'),
   })
   .superRefine(({ mobile, password, confirmPassword }, ctx) => {
     if (!isPhoneNumberValid(mobile)) {
