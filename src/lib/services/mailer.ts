@@ -38,6 +38,32 @@ export async function sendVerificationEmail(to: string, token: string) {
 }
 
 export default sendVerificationEmail;
+
+export async function sendUsernameRecoveryEmail(
+  to: string,
+  username: string,
+  loginUrl: string
+): Promise<boolean> {
+  const subject = 'AromaCraft — Your username';
+  const html = `
+    <div style="font-family:sans-serif;max-width:480px;margin:0 auto">
+      <h2>Your username</h2>
+      <p>Your AromaCraft username is <strong>${username}</strong>.</p>
+      <p><a href="${loginUrl}" style="background:#6f4e37;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none">Sign in</a></p>
+      <p>If you did not request this, you can safely ignore this email.</p>
+    </div>
+  `;
+  const text = `Your AromaCraft username is ${username}. Sign in here: ${loginUrl}`;
+
+  try {
+    await provider.sendEmail(to, subject, html, text);
+    return true;
+  } catch (error) {
+    console.error('[mailer] error sending username recovery email', error);
+    return false;
+  }
+}
+
 export async function sendPasswordResetEmail(
   to: string,
   resetUrl: string

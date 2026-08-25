@@ -1,8 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { jsonError, jsonSuccess, validateMethod } from '@/lib/api-utils';
 import { findUserByEmail } from '@/lib/mock-auth';
+import { sendUsernameRecoveryEmail } from '@/lib/services/mailer';
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const methodError = validateMethod(req, res, ['POST']);
   if (methodError) return methodError;
 
@@ -12,16 +13,10 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   const user = findUserByEmail(email);
-  if (user) {
-    // Security: Username recovery should send via email/SMS, not log to console
-    if (process.env.NODE_ENV === 'development') {
-      if (
-        process.env.USE_MOCKS === 'true' &&
-        process.env.NODE_ENV === 'development'
-      ) {
-        console.info(`[DEV] Username recovery request for ${user.email}`);
-      }
-    }
+  if (user && process.env.NODE_ENV !== 'test') {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://127.0.0.1:3000';
+    const loginUrl = `${appUrl}/login`;
+    await sendUsernameRecoveryEmail(user.email, user.username, loginUrl);
   }
 
   return jsonSuccess(

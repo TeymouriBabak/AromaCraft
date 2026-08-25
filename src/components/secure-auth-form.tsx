@@ -266,6 +266,32 @@ export default function SecureAuthForm({
     return readiness && signupIsValid;
   }, [signupIsValid, signupValues]);
 
+  const validateLoginIdentifier = (value: string, mode: 'email' | 'username') => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return mode === 'email'
+        ? 'Please enter your email address.'
+        : 'Please enter your username.';
+    }
+
+    if (mode === 'email') {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+        return 'Please enter a valid email address.';
+      }
+      return '';
+    }
+
+    if (trimmed.includes('@')) {
+      return 'Username mode cannot include an email address.';
+    }
+
+    if (!/^[a-zA-Z0-9_.-]{3,}$/.test(trimmed)) {
+      return 'Username must be at least 3 characters and use only letters, numbers, dots, underscores, or hyphens.';
+    }
+
+    return '';
+  };
+
   useEffect(() => {
     const timeout = window.setTimeout(() => {
       const firstNameValue = (signupValues.firstName ?? '').trim();
@@ -376,12 +402,30 @@ export default function SecureAuthForm({
   ]);
 
   const onLogin = async (values: LoginFormValues) => {
+    const loginModeValue = values.loginMode ?? 'email';
+    const validationError = validateLoginIdentifier(
+      values.identifier,
+      loginModeValue
+    );
+
+    if (validationError) {
+      setSubmitState('idle');
+      setIsSubmitting(false);
+      setMessage({ type: 'error', text: validationError });
+      return;
+    }
+
     setSubmitState('loading');
     setIsSubmitting(true);
     setMessage(null);
 
     try {
-      const result = await login(values.identifier, values.password, values.role);
+      const result = await login(
+        values.identifier.trim(),
+        values.password,
+        values.role,
+        loginModeValue
+      );
 
       if (result.requiresOtp) {
         setPendingLoginUsername(values.identifier);

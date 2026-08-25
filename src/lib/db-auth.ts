@@ -161,13 +161,15 @@ export async function createDbUser(userData: {
 
 export async function authenticateCredentials(
   identifier: string,
-  password: string
+  password: string,
+  method: 'email' | 'username' = 'email'
 ) {
   const normalized = normalizeIdentifier(identifier);
-  const user = await prisma.user.findFirst({
-    where: {
-      OR: [{ email: normalized }, { username: normalized }],
-    },
+  const user = await prisma.user.findUnique({
+    where:
+      method === 'username'
+        ? { username: normalized }
+        : { email: normalized },
   });
 
   if (!user) return null;

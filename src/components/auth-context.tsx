@@ -42,7 +42,8 @@ type AuthContextValue = {
   login: (
     identifier: string,
     password: string,
-    role?: 'customer' | 'admin' | 'manager'
+    role?: 'customer' | 'admin' | 'manager',
+    method?: 'email' | 'username'
   ) => Promise<AuthResponse>;
   verifyLogin: (identifier: string, otp: string) => Promise<AuthResponse>;
   signup: (input: {
@@ -188,14 +189,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (
       identifier: string,
       password: string,
-      role?: 'customer' | 'admin' | 'manager'
+      role?: 'customer' | 'admin' | 'manager',
+      method: 'email' | 'username' = 'email'
     ): Promise<AuthResponse> => {
       try {
         const data = await api.post<{
           requiresOtp?: boolean;
           maskedMobile?: string;
           user?: AuthUser;
-        }>('/api/auth/login', { identifier, password, role });
+        }>('/api/auth/login', { identifier, password, role, method });
         if (data?.requiresOtp) {
           return {
             success: true,

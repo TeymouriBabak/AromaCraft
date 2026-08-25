@@ -669,12 +669,13 @@ async function findKnownUserByUsername(username: string) {
 
 export async function authenticateCredentials(
   identifier: string,
-  password: string
+  password: string,
+  method: 'email' | 'username' = 'email'
 ) {
   const norm = identifier.trim().toLowerCase();
   let dbUser = null;
   try {
-    dbUser = await authenticateDbUser(norm, password);
+    dbUser = await authenticateDbUser(norm, password, method);
   } catch (err) {
     // Surface DB/auth errors so callers receive 500 instead of a silent 401
     console.error(
@@ -688,7 +689,9 @@ export async function authenticateCredentials(
   const allowMocks =
     process.env.USE_MOCKS === 'true' && process.env.NODE_ENV !== 'production';
   const user = allowMocks
-    ? findMockUserByEmail(norm) || findMockUserByUsername(norm)
+    ? method === 'email'
+      ? findMockUserByEmail(norm)
+      : findMockUserByUsername(norm)
     : null;
   if (!user) return null;
   if (user.passwordHash !== password) return null;
@@ -702,6 +705,8 @@ function parseLoginBody(req: NextApiRequest) {
     username?: string;
     password?: string;
     role?: string;
+    method?: string;
+    loginMode?: string;
   }>(req);
   if (
     jsonBody &&
@@ -715,6 +720,8 @@ function parseLoginBody(req: NextApiRequest) {
         jsonBody.identifier ?? jsonBody.email ?? jsonBody.username ?? '',
       password: jsonBody.password ?? '',
       role: jsonBody.role ?? 'customer',
+      method: jsonBody.method ?? jsonBody.loginMode ?? 'email',
+      loginMode: jsonBody.method ?? jsonBody.loginMode ?? 'email',
     };
   }
 
@@ -728,7 +735,8 @@ function parseLoginBody(req: NextApiRequest) {
       '';
     const password = params.get('password') ?? '';
     const role = params.get('role') ?? 'customer';
-    return { identifier, password, role };
+    const method = params.get('method') ?? params.get('loginMode') ?? 'email';
+    return { identifier, password, role, method, loginMode: method };
   }
 
   return null;
@@ -804,7 +812,41 @@ export async function handleLogin(req: NextApiRequest, res: NextApiResponse) {
       );
     }
 
-    const user = await authenticateCredentials(body.identifier, body.password);
+    const method = String(body.method ?? body.loginMode ?? 'email')
+      .trim()
+      .toLowerCase();
+    if (method !== 'email' && method !== 'username') {
+      return jsonError(
+        res,
+        'invalid_request',
+        'Login method must be "email" or "username".',
+        400
+      );
+    }
+
+    const identifier = String(body.identifier).trim();
+    if (method === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier)) {
+      return jsonError(
+        res,
+        'invalid_identifier',
+        'Please enter a valid email address.',
+        400
+      );
+    }
+
+    if (
+      method === 'username' &&
+      (identifier.includes('@') || !/^[a-zA-Z0-9_.-]{3,}$/.test(identifier))
+    ) {
+      return jsonError(
+        res,
+        'invalid_identifier',
+        'Please enter a valid username for username login.',
+        400
+      );
+    }
+
+    const user = await authenticateCredentials(identifier, body.password, method);
     if (!user)
       return jsonError(
         res,
