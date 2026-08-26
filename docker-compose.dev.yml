@@ -69,6 +69,7 @@ services:
       REDIS_URL: 'redis://redis:6379'
       DOCKER_ENVIRONMENT: 'true'
       SMS_MOCK_URL: 'http://sms-mock:3001'
+      # Docker execution; use the Mailpit service hostname on the Compose network.
       SMTP_HOST: mailpit
       SMTP_PORT: 1025
       USE_MOCKS: ${USE_MOCKS}

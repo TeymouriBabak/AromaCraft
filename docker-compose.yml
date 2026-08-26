@@ -6,6 +6,7 @@ services:
     container_name: aromacraft-app
     image: aromacraft_app:local
     restart: unless-stopped
+    # Do not run this service simultaneously with the host dev server on port 3000.
     ports:
       - '127.0.0.1:3000:3000'
     env_file:
@@ -16,6 +17,7 @@ services:
       REDIS_URL: 'redis://redis:6379'
       DOCKER_ENVIRONMENT: 'true'
       SMS_MOCK_URL: 'http://mock-sms:3000'
+      # Docker execution; use the Mailpit service hostname on the Compose network.
       SMTP_HOST: mailpit
       SMTP_PORT: 1025
       USE_MOCKS: ${USE_MOCKS}
@@ -47,6 +49,7 @@ services:
       REDIS_URL: 'redis://redis:6379'
       DOCKER_ENVIRONMENT: 'true'
       SMS_MOCK_ENDPOINT: 'http://mock-sms:3000/sms'
+      # Docker execution; use the Mailpit service hostname on the Compose network.
       SMTP_HOST: mailpit
       SMTP_PORT: 1025
       USE_MOCKS: ${USE_MOCKS}

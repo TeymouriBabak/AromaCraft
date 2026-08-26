@@ -68,16 +68,6 @@ export async function sendPasswordResetEmail(
   to: string,
   resetUrl: string
 ): Promise<boolean> {
-  console.log('[mailer] sendPasswordResetEmail CALLED', {
-    to,
-    resetUrl,
-    NODE_ENV: process.env.NODE_ENV,
-    EMAIL_PROVIDER: process.env.EMAIL_PROVIDER,
-    SMTP_HOST: process.env.SMTP_HOST,
-    SMTP_PORT: process.env.SMTP_PORT,
-    providerName: (provider as { name?: string }).name ?? provider.constructor?.name,
-  });
-
   try {
     await provider.sendEmail(
       to,
@@ -93,7 +83,6 @@ export async function sendPasswordResetEmail(
       `Reset your password (valid 15 minutes): ${resetUrl}`
     );
 
-    console.log('[mailer] provider.sendEmail RESOLVED OK ->', to);
     return true;
   } catch (error) {
     console.error('[mailer] error sending password reset email', error);
