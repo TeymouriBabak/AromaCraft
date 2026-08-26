@@ -3,17 +3,17 @@
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Suspense, useState } from 'react';
 
-// Password rules — identical to the registration form
+// Password rules -- identical to the registration form
 const PASSWORD_REGEX =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&_\-#^])[A-Za-z\d@$!%*?&_\-#^]{8,}$/;
 
 const PASSWORD_HINT =
-  'At least 8 characters — include uppercase, lowercase, a number, and a special character (@$!%*?&_-#^).';
+  'At least 8 characters -- include uppercase, lowercase, a number, and a special character (@$!%*?&_-#^).';
 
 function ResetPasswordForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const token = searchParams.get('token') ?? '';
+  const token = searchParams?.get('token') ?? '';
 
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -167,7 +167,7 @@ function ResetPasswordForm() {
         </div>
 
         <button type="submit" className="btn-primary" disabled={loading}>
-          {loading ? 'Updating…' : 'Set new password'}
+          {loading ? 'Updating...' : 'Set new password'}
         </button>
       </form>
     </div>
@@ -196,7 +196,11 @@ export default function ResetPasswordPage() {
           padding: 2rem 1rem;
           background: var(--surface);
           font-family: system-ui, sans-serif;
-          color: var(--text);ffth: 100%;
+          color: var(--text);
+        }
+
+        .card {
+          width: 100%;
           max-width: 420px;
           background: #fff;
           border: 1px solid var(--border);
@@ -255,83 +259,49 @@ export default function ResetPasswordPage() {
           outline: none;
         }
 
-        input
-        [type=“password”]:focus {
+        input[type="password"]:focus {
+          border-color: var(--accent);
+          box-shadow: 0 0 0 3px oklch(38% 0.08 44 / 15%);
+        }
 
-border-color: var(–accent);
+        .field-error {
+          font-size: 0.75rem;
+          color: var(--error);
+        }
 
-box-shadow: 0 0 0 3px oklch(38% 0.08 44 / 15%);
+        .field-hint {
+          font-size: 0.75rem;
+          color: var(--muted);
+        }
 
-}
+        .btn-primary {
+          display: block;
+          width: 100%;
+          height: 44px;
+          border-radius: 8px;
+          background: var(--accent);
+          color: #fff;
+          font-weight: 600;
+          border: none;
+          cursor: pointer;
+          margin-top: 1rem;
+        }
 
-.field-error {
+        .btn-primary:hover {
+          background: var(--accent-hover);
+        }
 
-font-size: 0.75rem;
+        .btn-primary:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+      `}</style>
 
-color: var(–error);
-
-}
-
-.field-hint {
-
-font-size: 0.75rem;
-
-color: var(–muted);
-
-}
-
-.btn-primary {
-
-display: block;
-
-width: 100%;
-
-height: 44px;
-
-border-radius: 8px;
-
-background: var(–accent);
-
-color: #fff;
-
-font-weight: 600;
-
-border: none;
-
-cursor: pointer;
-
-margin-top: 1rem;
-
-}
-
-.btn-primary:hover {
-
-background: var(–accent-hover);
-
-}
-
-.btn-primary:disabled {
-
-opacity: 0.6;
-
-cursor: not-allowed;
-
-}
-
-`}</style>
-
-<div className=“page-wrap”>
-
-<Suspense fallback={<div>Loading…</div>}>
-
-<ResetPasswordForm />
-
-</Suspense>
-
-</div>
-
-</>
-
-);
-
+      <div className="page-wrap">
+        <Suspense fallback={<div>Loading...</div>}>
+          <ResetPasswordForm />
+        </Suspense>
+      </div>
+    </>
+  );
 }

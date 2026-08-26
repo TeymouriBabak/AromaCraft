@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { jsonError, jsonSuccess, validateMethod } from '@/lib/api-utils';
 import { validateResetToken, updateUserPassword } from '@/lib/mock-auth';
 
-// Password rules — must match registration form in secure-auth-form.tsx
+// Password rules -- must match registration form in secure-auth-form.tsx
 const PASSWORD_REGEX =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&_\-#^])[A-Za-z\d@$!%*?&_\-#^]{8,}$/;
 

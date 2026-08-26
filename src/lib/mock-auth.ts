@@ -70,6 +70,23 @@ export function verifyResetToken(token: string) {
   return entry;
 }
 
+export function validateResetToken(token: string): string | null {
+  return verifyResetToken(token)?.userId ?? null;
+}
+
+export function updateUserPassword(userId: string, newPassword: string): boolean {
+  const user = findUserById(userId);
+  if (!user) return false;
+
+  user.passwordHash = newPassword;
+
+  for (const [token, entry] of tokenStore) {
+    if (entry.userId === userId) tokenStore.delete(token);
+  }
+
+  return true;
+}
+
 export function clearResetToken(token: string) {
   tokenStore.delete(token);
 }
