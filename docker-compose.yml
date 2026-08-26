@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: dev
     container_name: aromacraft-app
     image: aromacraft_app:local
     restart: unless-stopped

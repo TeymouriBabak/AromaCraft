@@ -12,6 +12,13 @@ COPY package*.json ./
 # Install all dependencies (including dev) so native optional binaries are available
 RUN npm ci
 
+FROM deps AS dev
+WORKDIR /usr/src/app
+COPY . .
+ENV NODE_ENV=development
+EXPOSE 3000
+CMD ["npm", "run", "dev", "--", "-H", "0.0.0.0"]
+
 FROM node:20-bookworm-slim AS builder
 WORKDIR /usr/src/app
 
