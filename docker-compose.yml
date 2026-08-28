@@ -34,6 +34,22 @@ services:
       - mailpit
       - mock-sms
 
+  prisma-studio:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
+    command: ['npx', 'prisma', 'studio', '--hostname', '0.0.0.0', '--port', '5555']
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: '${DATABASE_URL_DOCKER:?DATABASE_URL_DOCKER must be set in .env}'
+    ports:
+      - '127.0.0.1:5555:5555'
+    depends_on:
+      - mariadb
+
   test:
     build:
       context: .

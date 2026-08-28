@@ -1,167 +1,73 @@
 'use client';
 
-import React from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from 'recharts';
+import { Area, AreaChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend } from 'recharts';
+import { AlertTriangle, ArrowDownRight, ArrowUpRight, ClipboardList, DollarSign, MessageSquare, Plus, ShieldCheck, Users } from 'lucide-react';
 import useManagerStats from '@/hooks/useManagerStats';
+import { signupSchema, type SignupFormValues } from '@/lib/auth-validation';
 
-const revenueData = Array.from({ length: 12 }).map((_, i) => ({
-  month: `M${i + 1}`,
-  revenue: Math.round(Math.random() * 10000 + 2000),
-  target: Math.round(8000 + Math.random() * 3000),
-}));
+type Overview = {
+  totalRevenue?: number; totalOrders?: number; totalCustomers?: number; pendingReviews?: number; inventoryAlerts?: number;
+  lowStockItems?: { id: number; name: string; brand: string; inventory: number }[];
+  revenueData?: { month: string; revenue: number; target: number }[];
+};
+
 const brandShare = [
-  { name: 'AromaCraft', value: 45 },
-  { name: 'Starbucks', value: 22 },
-  { name: "Gloria Jean's", value: 12 },
-  { name: 'Tim Hortons', value: 8 },
-  { name: 'Others', value: 13 },
+  { name: 'AromaCraft', value: 45, color: '#4c7ea8' },
+  { name: 'Northstar', value: 24, color: '#5c9b7a' },
+  { name: 'Mosaic Roasters', value: 18, color: '#d9822b' },
+  { name: 'Other brands', value: 13, color: '#9b6b9e' },
 ];
-const COLORS = ['#d4a373', '#1A120B', '#c9854d', '#2c1d11', '#f4c36b'];
+const fields: { key: keyof SignupFormValues; label: string; type?: string }[] = [
+  { key: 'firstName', label: 'First name' }, { key: 'lastName', label: 'Last name' }, { key: 'gender', label: 'Gender' },
+  { key: 'username', label: 'Username' }, { key: 'email', label: 'Email', type: 'email' }, { key: 'mobile', label: 'Mobile with country code' },
+  { key: 'password', label: 'Password', type: 'password' }, { key: 'confirmPassword', label: 'Confirm password', type: 'password' },
+];
+
+function Kpi({ label, value, icon: Icon, color, trend }: { label: string; value: string | number; icon: typeof DollarSign; color: string; trend: string }) {
+  const positive = trend.startsWith('+');
+  return <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl border border-[#dce2e9] bg-white p-5 shadow-[0_5px_18px_rgba(39,51,69,0.05)]">
+    <div className="flex items-center justify-between"><div className="flex h-10 w-10 items-center justify-center rounded-lg" style={{ backgroundColor: `${color}18`, color }}><Icon size={19} /></div><span className={`inline-flex items-center gap-1 text-xs font-semibold ${positive ? 'text-[#438567]' : 'text-[#bd5d55]'}`}>{positive ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}{trend}</span></div>
+    <div className="mt-5 text-2xl font-bold text-[#273345]">{value}</div><div className="mt-1 text-sm text-[#7890a5]">{label}</div>
+  </motion.div>;
+}
+
+function RegistrationForm({ role }: { role: 'ADMIN' | 'CUSTOMER' }) {
+  const [values, setValues] = useState<SignupFormValues>({ firstName: '', lastName: '', gender: '', username: '', mobile: '', email: '', password: '', confirmPassword: '', avatarUrl: '' });
+  const [message, setMessage] = useState('');
+  const submit = (event: React.FormEvent) => { event.preventDefault(); const result = signupSchema.safeParse(values); setMessage(result.success ? `${role === 'ADMIN' ? 'Admin' : 'Customer'} details validated and ready to register.` : (result.error.issues[0]?.message ?? 'Check the form fields.')); };
+  return <form onSubmit={submit} className="mt-4 grid gap-3 sm:grid-cols-2">
+    {fields.map(({ key, label, type }) => <label key={key} className="text-sm font-medium text-[#526375]">{label}<input required type={type ?? 'text'} value={values[key]} onChange={(event) => setValues({ ...values, [key]: event.target.value })} className="mt-1.5 w-full rounded-lg border border-[#dce2e9] bg-[#fbfcfd] px-3 py-2.5 text-[#273345] outline-none focus:border-[#4c7ea8]" /></label>)}
+    <label className="text-sm font-medium text-[#526375] sm:col-span-2">Profile photo upload<input required type="file" accept="image/*" className="mt-1.5 block w-full rounded-lg border border-dashed border-[#b9c9d6] bg-[#fbfcfd] px-3 py-2 text-sm" onChange={(event) => setValues({ ...values, avatarUrl: event.target.files?.[0]?.name ?? '' })} /></label>
+    <div className="flex items-center gap-3 sm:col-span-2"><button className="inline-flex items-center gap-2 rounded-lg bg-[#4c7ea8] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#3f6d94]"><Plus size={16} /> Register {role === 'ADMIN' ? 'admin' : 'customer'}</button>{message && <span className="text-sm text-[#526375]">{message}</span>}</div>
+  </form>;
+}
 
 export default function ManagerDashboard() {
   const { data, loading, error } = useManagerStats();
-  // `useManagerStats` now returns only the manager overview shape; keep backward compatibility
-  const source = data as unknown as Record<string, unknown> | undefined;
-  const overview =
-    source &&
-    'overview' in source &&
-    typeof source.overview === 'object' &&
-    source.overview != null
-      ? (source.overview as Record<string, unknown>)
-      : (source ?? {});
-
-  if (loading) {
-    return (
-      <div className="text-sm text-[#6e4b33]">Loading manager overview…</div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="text-sm text-[#b56e3b]">
-        Unable to load manager metrics right now.
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-semibold">Manager Dashboard</h2>
-      </div>
-
-      <div className="mt-4 rounded-2xl border border-[#e9e1d6] bg-[#fdf9f2] p-4 text-sm text-[#2C1D11]">
-        <div className="font-semibold">Manager snapshot</div>
-        <div className="mt-1 text-[#6e4b33]">
-          Pending orders:{' '}
-          {typeof overview?.['pendingOrders'] === 'number'
-            ? (overview['pendingOrders'] as number)
-            : 0}{' '}
-          · Revenue this week:{' '}
-          {typeof overview?.['revenueThisWeek'] === 'number'
-            ? (overview['revenueThisWeek'] as number)
-            : 0}{' '}
-          · Inventory alerts:{' '}
-          {typeof overview?.['inventoryAlerts'] === 'number'
-            ? (overview['inventoryAlerts'] as number)
-            : 0}{' '}
-          · Response rate:{' '}
-          {typeof overview?.['teamResponseRate'] === 'number'
-            ? `${overview['teamResponseRate']}%`
-            : '—'}
-        </div>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2 mt-6">
-        <motion.div
-          className="rounded-2xl bg-white p-4 shadow"
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <h3 className="text-sm font-medium">Revenue vs Targets</h3>
-          <div style={{ width: '100%', height: 220 }}>
-            <ResponsiveContainer>
-              <AreaChart data={revenueData}>
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
-                <Area
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke="#1A120B"
-                  fill="#d4a373"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="target"
-                  stroke="#c9854d"
-                  fill="#f4efe6"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </motion.div>
-        <motion.div
-          className="rounded-2xl bg-white p-4 shadow"
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <h3 className="text-sm font-medium">Brand Sales Share</h3>
-          <div style={{ width: '100%', height: 220 }}>
-            <ResponsiveContainer>
-              <PieChart>
-                <Pie
-                  data={brandShare}
-                  dataKey="value"
-                  nameKey="name"
-                  outerRadius={80}
-                  fill="#8884d8"
-                >
-                  {brandShare.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={COLORS[index % COLORS.length]}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </motion.div>
-      </div>
-      <div className="mt-6 rounded-2xl bg-white p-4 shadow">
-        <h3 className="text-sm font-medium">Inventory Alerts</h3>
-        <div className="mt-3 grid gap-3">
-          {[
-            { name: 'Dark Roast Espresso', qty: 12 },
-            { name: 'Morning Blend', qty: 8 },
-            { name: 'Ethiopian Single Origin', qty: 3 },
-          ].map((it) => (
-            <div
-              key={it.name}
-              className="flex items-center justify-between rounded-lg border p-3"
-            >
-              <div>
-                <div className="font-semibold">{it.name}</div>
-                <div className="text-sm text-[#6e4b33]">Low stock alert</div>
-              </div>
-              <div className="text-sm">{it.qty} left</div>
-            </div>
-          ))}
-        </div>
-      </div>
+  const overview = (data?.overview ?? {}) as Overview;
+  if (loading) return <div className="p-8 text-sm text-[#7890a5]">Loading manager overview...</div>;
+  if (error) return <div className="p-8 text-sm text-[#bd5d55]">Unable to load manager metrics right now.</div>;
+  const lowStock = overview.lowStockItems ?? [];
+  const revenueData = overview.revenueData ?? [];
+  const kpis = [
+    ['Total revenue', `$${(overview.totalRevenue ?? 0).toLocaleString()}`, DollarSign, '#4c7ea8', '+8.4%'], ['Total orders', overview.totalOrders ?? 0, ClipboardList, '#5c9b7a', '+5.1%'],
+    ['Active customers', overview.totalCustomers ?? 0, Users, '#9b6b9e', '+12.6%'], ['Pending reviews', overview.pendingReviews ?? 0, MessageSquare, '#d9822b', '-2.3%'], ['Low-stock items', overview.inventoryAlerts ?? lowStock.length, AlertTriangle, '#bd5d55', '-4.0%'],
+  ] as const;
+  return <div className="bg-[#f4f6f9] p-5 sm:p-8">
+    <section id="overview"><div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-sm font-semibold text-[#4c7ea8]">Friday, August 28, 2026</p><h1 className="mt-1 text-3xl font-bold text-[#273345]">Good morning, manager</h1><p className="mt-2 text-sm text-[#7890a5]">Here is what is happening across AromaCraft today.</p></div><button className="rounded-lg border border-[#dce2e9] bg-white px-4 py-2.5 text-sm font-semibold text-[#526375]">Last 30 days</button></div>
+      <div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">{kpis.map(([label, value, icon, color, trend]) => <Kpi key={label} label={label} value={value} icon={icon} color={color} trend={trend} />)}</div>
+    </section>
+    <div className="mt-6 grid gap-6 xl:grid-cols-[1.35fr_0.65fr]">
+      <section id="reports" className="rounded-xl border border-[#dce2e9] bg-white p-5"><div className="flex items-center justify-between"><div><h2 className="font-semibold text-[#273345]">Revenue vs target</h2><p className="mt-1 text-xs text-[#7890a5]">Monthly performance</p></div><span className="rounded-full bg-[#edf5fa] px-2.5 py-1 text-xs font-semibold text-[#4c7ea8]">Live data</span></div><div className="mt-5 h-64"><ResponsiveContainer><AreaChart data={revenueData}><XAxis dataKey="month" tickLine={false} axisLine={false} /><YAxis tickLine={false} axisLine={false} tickFormatter={(value) => `$${value / 1000}k`} /><Tooltip formatter={(value) => `$${Number(value).toLocaleString()}`} /><Legend /><Area name="Revenue" type="monotone" dataKey="revenue" stroke="#4c7ea8" fill="#dceaf3" strokeWidth={2} /><Area name="Target" type="monotone" dataKey="target" stroke="#d9822b" fill="#fff1df" strokeWidth={2} /></AreaChart></ResponsiveContainer></div></section>
+      <section className="rounded-xl border border-[#dce2e9] bg-white p-5"><h2 className="font-semibold text-[#273345]">Brand sales share</h2><div className="mt-4 h-64"><ResponsiveContainer><PieChart><Pie data={brandShare} dataKey="value" nameKey="name" innerRadius={55} outerRadius={82} label={({ value }) => `${value}%`}>{brandShare.map((brand) => <Cell key={brand.name} fill={brand.color} />)}</Pie><Tooltip formatter={(value) => `${value}%`} /><Legend /></PieChart></ResponsiveContainer></div></section>
     </div>
-  );
+    <section id="inventory" className="mt-6 rounded-xl border border-[#dce2e9] bg-white p-5"><div className="flex items-center justify-between"><div><h2 className="font-semibold text-[#273345]">Low-stock inventory</h2><p className="mt-1 text-xs text-[#7890a5]">{lowStock.length} items need attention</p></div><button className="text-sm font-semibold text-[#4c7ea8]">View inventory</button></div><div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3">{lowStock.map((item) => <div key={item.id} className="flex items-center justify-between rounded-lg border border-[#edf0f3] p-3"><div><div className="font-medium text-[#273345]">{item.name}</div><div className="text-xs text-[#7890a5]">{item.brand}</div></div><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${item.inventory <= 3 ? 'bg-[#fce9e8] text-[#bd5d55]' : 'bg-[#fff1df] text-[#b96d1f]'}`}>{item.inventory} left</span></div>)}</div></section>
+    <section id="customers" className="mt-6 rounded-xl border border-[#dce2e9] bg-white p-5"><h2 className="font-semibold text-[#273345]">Customers</h2><p className="mt-1 text-sm text-[#7890a5]">Review account activity, order history, and ban or unban customer access.</p><div className="mt-4 rounded-lg bg-[#f4f6f9] p-4 text-sm text-[#526375]">Customer records are ready for the next management action.</div></section>
+    <section id="reviews" className="mt-6 rounded-xl border border-[#dce2e9] bg-white p-5"><h2 className="font-semibold text-[#273345]">Reviews moderation</h2><p className="mt-1 text-sm text-[#7890a5]">Approve or reject homepage testimonials and product reviews from one queue.</p><div className="mt-4 flex items-center gap-3 rounded-lg bg-[#fff8ed] p-4 text-sm text-[#8b641f]"><MessageSquare size={18} /> {overview.pendingReviews ?? 0} submissions awaiting review</div></section>
+    <section id="shop" className="mt-6 rounded-xl border border-[#dce2e9] bg-white p-5"><h2 className="font-semibold text-[#273345]">Shop management</h2><p className="mt-1 text-sm text-[#7890a5]">Manage products, brands, and the filters used by the public shop.</p><div className="mt-4 flex flex-wrap gap-2"><button className="rounded-lg bg-[#4c7ea8] px-3 py-2 text-sm font-semibold text-white">Add product</button><button className="rounded-lg border border-[#dce2e9] px-3 py-2 text-sm font-semibold text-[#526375]">Manage brands</button><button className="rounded-lg border border-[#dce2e9] px-3 py-2 text-sm font-semibold text-[#526375]">Edit filters</button></div></section>
+    <section id="admins" className="mt-6 grid gap-6 xl:grid-cols-2"><div className="rounded-xl border border-[#dce2e9] bg-white p-5"><div className="flex items-center gap-2"><ShieldCheck size={19} className="text-[#4c7ea8]" /><h2 className="font-semibold text-[#273345]">Register new admin</h2></div><p className="mt-1 text-sm text-[#7890a5]">Manager-only account creation with the same validation as public sign-up.</p><RegistrationForm role="ADMIN" /></div><div className="rounded-xl border border-[#dce2e9] bg-white p-5"><h2 className="font-semibold text-[#273345]">Register new customer</h2><p className="mt-1 text-sm text-[#7890a5]">Create a customer account directly from operations.</p><RegistrationForm role="CUSTOMER" /></div></section>
+    <div id="orders" className="sr-only">Orders</div>
+  </div>;
 }

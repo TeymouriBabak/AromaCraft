@@ -2,6 +2,7 @@
 
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Suspense, useState } from 'react';
+import { Check, Eye, EyeOff, X } from 'lucide-react';
 
 // Password rules -- identical to the registration form
 const PASSWORD_REGEX =
@@ -22,6 +23,32 @@ function ResetPasswordForm() {
   const [serverError, setServerError] = useState('');
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  const passwordStrength = (() => {
+    let score = 0;
+    if (password.length >= 8) score += 1;
+    if (/[A-Z]/.test(password) && /[a-z]/.test(password)) score += 1;
+    if (/\d/.test(password)) score += 1;
+    if (/[^A-Za-z0-9]/.test(password)) score += 1;
+    const percent = Math.min((score / 4) * 100, 100);
+    if (score <= 1)
+      return { label: 'Weak', tone: 'weak', percent, bar: 'weak', score };
+    if (score <= 2)
+      return { label: 'Fair', tone: 'fair', percent, bar: 'fair', score };
+    if (score <= 3)
+      return { label: 'Good', tone: 'good', percent, bar: 'good', score };
+    return { label: 'Very Strong', tone: 'strong', percent, bar: 'strong', score };
+  })();
+
+  const passwordRequirements = [
+    { label: 'At least 8 characters', valid: password.length >= 8 },
+    { label: 'One uppercase letter', valid: /[A-Z]/.test(password) },
+    { label: 'One lowercase letter', valid: /[a-z]/.test(password) },
+    { label: 'One number', valid: /\d/.test(password) },
+    { label: 'One special character', valid: /[^A-Za-z0-9]/.test(password) },
+  ];
 
   if (!token) {
     return (
@@ -91,8 +118,7 @@ function ResetPasswordForm() {
       }
 
       setDone(true);
-      // Redirect to login after 2 seconds so the user can read the success message
-      setTimeout(() => router.push('/login'), 2000);
+      router.push('/login');
     } catch {
       setServerError('Network error. Please check your connection and try again.');
     } finally {
@@ -120,19 +146,48 @@ function ResetPasswordForm() {
       <form onSubmit={handleSubmit} noValidate>
         <div className="field">
           <label htmlFor="password">New password</label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            autoComplete="new-password"
-            aria-describedby={passwordError ? 'password-error' : 'password-hint'}
-            aria-invalid={!!passwordError}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              if (passwordError) setPasswordError(validatePassword(e.target.value));
-            }}
-            onBlur={(e) => setPasswordError(validatePassword(e.target.value))}
-          />
+          <div className="input-wrap">
+            <input
+              id="password"
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              autoComplete="new-password"
+              aria-describedby={passwordError ? 'password-error' : 'password-hint'}
+              aria-invalid={!!passwordError}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (passwordError) setPasswordError(validatePassword(e.target.value));
+              }}
+              onBlur={(e) => setPasswordError(validatePassword(e.target.value))}
+            />
+            <button
+              type="button"
+              className="visibility-toggle"
+              aria-label={showPassword ? 'Hide new password' : 'Show new password'}
+              onClick={() => setShowPassword((value) => !value)}
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
+          {password ? (
+            <div className="strength" aria-label={`Password strength: ${passwordStrength.label}`}>
+              <div className="strength-heading">
+                <span>Password strength</span>
+                <span className={passwordStrength.tone}>{passwordStrength.label}</span>
+              </div>
+              <div className="strength-track">
+                <div className={`strength-bar ${passwordStrength.bar}`} style={{ width: `${passwordStrength.percent}%` }} />
+              </div>
+              <ul className="requirements">
+                {passwordRequirements.map((rule) => (
+                  <li key={rule.label}>
+                    {rule.valid ? <Check size={14} className="valid" /> : <X size={14} className="invalid" />}
+                    {rule.label}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           {passwordError ? (
             <span id="password-error" className="field-error" role="alert">
               {passwordError}
@@ -146,19 +201,29 @@ function ResetPasswordForm() {
 
         <div className="field">
           <label htmlFor="confirm">Confirm new password</label>
-          <input
-            id="confirm"
-            type="password"
-            value={confirm}
-            autoComplete="new-password"
-            aria-describedby={confirmError ? 'confirm-error' : undefined}
-            aria-invalid={!!confirmError}
-            onChange={(e) => {
-              setConfirm(e.target.value);
-              if (confirmError) setConfirmError(validateConfirm(e.target.value, password));
-            }}
-            onBlur={(e) => setConfirmError(validateConfirm(e.target.value, password))}
-          />
+          <div className="input-wrap">
+            <input
+              id="confirm"
+              type={showConfirm ? 'text' : 'password'}
+              value={confirm}
+              autoComplete="new-password"
+              aria-describedby={confirmError ? 'confirm-error' : undefined}
+              aria-invalid={!!confirmError}
+              onChange={(e) => {
+                setConfirm(e.target.value);
+                if (confirmError) setConfirmError(validateConfirm(e.target.value, password));
+              }}
+              onBlur={(e) => setConfirmError(validateConfirm(e.target.value, password))}
+            />
+            <button
+              type="button"
+              className="visibility-toggle"
+              aria-label={showConfirm ? 'Hide confirmed password' : 'Show confirmed password'}
+              onClick={() => setShowConfirm((value) => !value)}
+            >
+              {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
           {confirmError && (
             <span id="confirm-error" className="field-error" role="alert">
               {confirmError}
@@ -258,6 +323,50 @@ export default function ResetPasswordPage() {
           transition: border-color 120ms ease;
           outline: none;
         }
+
+        input[type="text"] {
+          height: 44px;
+          width: 100%;
+          padding: 0 0.875rem;
+          border: 1px solid var(--border);
+          border-radius: 8px;
+          font-size: 1rem;
+          color: var(--text);
+          background: #fff;
+          outline: none;
+        }
+
+        .input-wrap { position: relative; }
+        .input-wrap input { padding-right: 3rem; }
+        .visibility-toggle {
+          position: absolute;
+          top: 50%;
+          right: 0.75rem;
+          display: grid;
+          place-items: center;
+          padding: 0.25rem;
+          border: 0;
+          color: var(--muted);
+          background: transparent;
+          cursor: pointer;
+          transform: translateY(-50%);
+        }
+        .visibility-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+        .strength { margin-top: 0.85rem; }
+        .strength-heading { display: flex; justify-content: space-between; margin-bottom: 0.5rem; color: var(--muted); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.12em; }
+        .strength-heading .weak, .invalid { color: #e76f51; }
+        .strength-heading .fair { color: #c9854d; }
+        .strength-heading .good { color: #d4a373; }
+        .strength-heading .strong, .valid { color: #2f7d4a; }
+        .strength-track { height: 8px; border-radius: 999px; background: #efe2d2; }
+        .strength-bar { height: 8px; border-radius: 999px; transition: width 300ms ease; }
+        .strength-bar.weak { background: #e76f51; }
+        .strength-bar.fair { background: #c9854d; }
+        .strength-bar.good { background: #d4a373; }
+        .strength-bar.strong { background: #2f7d4a; }
+        .requirements { display: grid; gap: 0.25rem; margin: 0.75rem 0 0; padding: 0; color: var(--muted); font-size: 0.75rem; list-style: none; }
+        .requirements li { display: flex; align-items: center; gap: 0.4rem; }
 
         input[type="password"]:focus {
           border-color: var(--accent);

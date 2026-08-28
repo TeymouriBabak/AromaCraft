@@ -1,6 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { jsonError, jsonSuccess, validateMethod } from '@/lib/api-utils';
-import { validateResetToken, updateUserPassword } from '@/lib/mock-auth';
+import bcrypt from 'bcryptjs';
+import {
+  clearResetToken,
+  validateResetToken,
+  updateUserPassword,
+} from '@/lib/mock-auth';
+import { findUserById as findDbUserById, revokeSessionsForUser } from '@/lib/db-auth';
+import { prisma } from '@/lib/prisma';
 
 // Password rules -- must match registration form in secure-auth-form.tsx
 const PASSWORD_REGEX =
@@ -42,10 +49,24 @@ export default async function handler(
     );
   }
 
-  const updated = updateUserPassword(userId, password);
+  const dbUser = await findDbUserById(userId).catch(() => null);
+  let updated = false;
+  if (dbUser) {
+    const passwordHash = await bcrypt.hash(password, 12);
+    await prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+    });
+    await revokeSessionsForUser(userId);
+    updated = true;
+  } else {
+    updated = updateUserPassword(userId, password);
+  }
   if (!updated) {
     return jsonError(res, 'update_failed', 'Could not update password.', 500);
   }
+
+  clearResetToken(token);
 
   return jsonSuccess(res, { message: 'Password updated successfully.' }, 200);
 }
