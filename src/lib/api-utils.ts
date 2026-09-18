@@ -1,8 +1,15 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 
-export type ApiSuccess<T> = { ok: true; data: T };
+export type ApiSuccess<T> = {
+  ok: true;
+  success: true;
+  data: T;
+  error: null;
+};
 export type ApiError = {
   ok: false;
+  success: false;
+  data: null;
   error: { code: string; message: string; details?: unknown };
 };
 export type ApiResponse<T> = ApiSuccess<T> | ApiError;
@@ -12,7 +19,7 @@ export function jsonSuccess<T>(
   data: T,
   status = 200
 ): void {
-  res.status(status).json({ ok: true, data });
+  res.status(status).json({ ok: true, success: true, data, error: null });
 }
 
 export function jsonError(
@@ -22,7 +29,12 @@ export function jsonError(
   status = 400,
   details?: unknown
 ): void {
-  res.status(status).json({ ok: false, error: { code, message, details } });
+  res.status(status).json({
+    ok: false,
+    success: false,
+    data: null,
+    error: { code, message, ...(details === undefined ? {} : { details }) },
+  });
 }
 
 export function parseJsonBody<T>(req: NextApiRequest): T | null {

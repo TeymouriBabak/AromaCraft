@@ -1,10 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Bean, Droplets, Star, ChevronLeft } from 'lucide-react';
 import type { Product } from '@/lib/shop-products';
-import { reviews } from '@/data/site-content';
 import { useCart } from '@/components/cart-context';
 
 interface ProductDetailClientProps {
@@ -23,6 +22,7 @@ const FREQUENCIES = ['2 weeks', '4 weeks', '6 weeks'] as const;
 export default function ProductDetailClient({
   product,
 }: ProductDetailClientProps) {
+  const [databaseReviews, setDatabaseReviews] = useState<Array<{ id: string; rating: number; content: string; author: string }>>([]);
   const [selectedSize, setSelectedSize] = useState<string>(product.size);
   const [selectedGrind, setSelectedGrind] = useState<string>(
     product.grindTypes[0] ?? 'Whole Bean'
@@ -31,6 +31,20 @@ export default function ProductDetailClient({
     FREQUENCIES[0]
   );
   const { addItem, openCart } = useCart();
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch(`/api/reviews?productId=${product.id}`, { signal: controller.signal })
+      .then(async (response) => {
+        const body = await response.json();
+        if (!response.ok || body.ok === false) throw new Error('Unable to load product reviews');
+        setDatabaseReviews(body.data?.reviews ?? []);
+      })
+      .catch((error: unknown) => {
+        if (error instanceof Error && error.name !== 'AbortError') setDatabaseReviews([]);
+      });
+    return () => controller.abort();
+  }, [product.id]);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 lg:px-8">
@@ -205,13 +219,13 @@ export default function ProductDetailClient({
             Reviews
           </h2>
           <div className="mt-5 space-y-4">
-            {reviews.map((review) => (
+            {databaseReviews.map((review) => (
               <div
                 key={review.id}
                 className="rounded-[1.25rem] border border-[#d4a373]/20 bg-white/80 p-4 dark:bg-[#1a0f0a]"
               >
                 <div className="flex items-center justify-between">
-                  <p className="font-semibold">{review.name}</p>
+                  <p className="font-semibold">{review.author}</p>
                   <div className="flex gap-1 text-[#d4a373]">
                     {Array.from({ length: review.rating }).map((_, idx) => (
                       <Star key={idx} size={14} fill="currentColor" />
@@ -223,6 +237,9 @@ export default function ProductDetailClient({
                 </p>
               </div>
             ))}
+            {databaseReviews.length === 0 && (
+              <p className="text-sm text-[#6e4b33] dark:text-[#e8d8c0]">No approved reviews yet.</p>
+            )}
           </div>
         </div>
       </div>

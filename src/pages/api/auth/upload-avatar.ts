@@ -166,8 +166,8 @@ export default async function handler(
     const ext = extByMime[mimeType];
     const provider = getStorageProvider();
     const fileName = `${randomUUID()}.${ext}`;
-    await provider.saveFile(`avatars/${fileName}`, file, mimeType);
-    return jsonSuccess(res, { url: `/api/auth/upload-avatar?f=${fileName}` }, 201);
+    const publicPath = await provider.saveFile(`avatars/${fileName}`, file, mimeType);
+    return jsonSuccess(res, { url: publicPath }, 201);
   } catch {
     return jsonError(res, 'server_error', 'Unable to store avatar image.', 500);
   }

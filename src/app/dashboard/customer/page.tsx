@@ -1,254 +1,172 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion, useReducedMotion } from 'framer-motion';
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  CartesianGrid,
-} from 'recharts';
-import useCustomerOverview from '@/hooks/useCustomerOverview';
-import useCustomerOrders from '@/hooks/useCustomerOrders';
-import { useCart } from '@/components/cart-context';
-import Skeleton from '@/components/Skeleton';
-import variants from '@/lib/motion-variants';
-import { formatCurrency } from '@/lib/currency';
+import { motion } from 'framer-motion';
+import { ShoppingBag, Award, Calendar, AlertTriangle } from 'lucide-react';
+import { useAuth } from '@/components/auth-context';
+import api from '@/lib/api-client';
+import { Kpi, Panel, EmptyState } from '@/components/dashboard';
 
-type ActivityChartItem = { hour: string; minutes: number };
-type MonthlyActivityItem = { month: string; actions: number };
-
-type ActivityResponse = {
-  activity?: Array<{ id: string; title: string; date: string }>;
-  charts?: { hourly?: ActivityChartItem[]; monthly?: MonthlyActivityItem[] };
-  summary?: { totalActions?: number; averageMinutes?: number };
-};
+interface CustomerOverview {
+  welcome?: string;
+  orderCount?: number;
+  totalSpent?: number;
+  loyaltyTier?: string;
+  lastOrderDate?: string;
+  nextReward?: string;
+}
 
 export default function CustomerDashboard() {
   const router = useRouter();
-  const { data, loading, error } = useCustomerOverview();
-  const {
-    orders,
-    loading: ordersLoading,
-    error: ordersError,
-  } = useCustomerOrders();
-  const { addItem } = useCart();
-  const overview = data?.overview || data;
-  const reduceMotion = useReducedMotion();
-  const [activityData, setActivityData] = useState<ActivityResponse | null>(
-    null
-  );
+  const { user, loading: authLoading } = useAuth();
+  const [overview, setOverview] = useState<CustomerOverview | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let mounted = true;
-    fetch('/api/dashboard/customer/activity', { credentials: 'include' })
-      .then((response) => response.json())
-      .then((payload) => {
-        if (!mounted) return;
-        setActivityData(payload?.data ?? payload ?? null);
-      })
-      .finally(() => {
-        // no-op; we keep activity data updated and avoid unused loading flag
-      });
+    if (!authLoading && (!user || !['customer', 'admin', 'manager'].includes(user.role ?? ''))) {
+      router.replace('/login');
+      return;
+    }
 
-    return () => {
-      mounted = false;
-    };
-  }, []);
+    if (!authLoading && user) {
+      void (async () => {
+        try {
+          const data = await api.get<{ overview: CustomerOverview }>(
+            '/api/dashboard/customer/overview'
+          );
+          setOverview(data?.overview ?? null);
+        } catch (err) {
+          console.error('Failed to fetch customer overview:', err);
+          setError('Unable to load your overview.');
+        } finally {
+          setLoading(false);
+        }
+      })();
+    }
+  }, [user, authLoading, router]);
 
-  const hourlyChart = activityData?.charts?.hourly ?? [];
-  const monthlyChart = activityData?.charts?.monthly ?? [];
-
-  const handleReorder = useCallback(
-    (orderId: string) => {
-      const order = orders.find((item) => item.id === orderId);
-      if (!order) return;
-
-      order.items.forEach((item) => {
-        const productId = Number(item.productId);
-        if (!Number.isFinite(productId) || productId <= 0) return;
-
-        addItem({
-          productId,
-          quantity: item.quantity,
-          name: item.name,
-          price: item.price,
-          size: item.size,
-          grindType: item.grindType,
-        });
-      });
-
-      router.push('/checkout');
-    },
-    [orders, addItem, router]
-  );
-
-  if (loading) {
+  if (authLoading || loading) {
     return (
-      <div className="text-sm text-[#6e4b33]">
-        <Skeleton rows={3} />
+      <div className="p-6 text-sm text-slate-400">Loading your account...</div>
+    );
+  }
+
+  if (!user || !['customer', 'admin', 'manager'].includes(user.role ?? '')) {
+    return (
+      <div className="p-6 text-sm text-red-400">
+        You do not have access to this dashboard.
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="text-sm text-[#b56e3b]">
-        Unable to load overview right now.
+      <div className="p-6">
+        <EmptyState
+          icon={AlertTriangle}
+          title="Unable to load dashboard"
+          description={error}
+        />
       </div>
     );
   }
 
+  const displayName = user?.firstName
+    ? `${user.firstName}${user.lastName ? ` ${user.lastName}` : ''}`
+    : user?.username;
+
   return (
-    <div>
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-semibold">Customer Dashboard</h2>
+    <div className="space-y-6 p-6">
+      <div>
+        <h1 className="text-2xl font-bold text-slate-100">
+          {overview?.welcome || `Welcome, ${displayName || 'Customer'}!`}
+        </h1>
+        <p className="mt-1 text-sm text-slate-400">
+          Manage your orders, addresses, and account settings
+        </p>
       </div>
 
-      <div className="mt-4 rounded-2xl border border-[#e9e1d6] bg-[#fdf9f2] p-4 text-sm text-[#2C1D11]">
-        <div className="font-semibold">
-          {overview?.welcome || 'Welcome back to your profile.'}
-        </div>
-        <div className="mt-1 text-[#6e4b33]">
-          Loyalty tier: {overview?.loyaltyTier || 'Standard'} · Next reward:{' '}
-          {overview?.nextReward || 'Check your next order'} · Points:{' '}
-          {overview?.pointsBalance || 0}
-        </div>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Kpi
+          label="Total Orders"
+          value={overview?.orderCount ?? 0}
+          icon={ShoppingBag}
+          color="#0ea5e9"
+        />
+        <Kpi
+          label="Amount Spent"
+          value={`$${(overview?.totalSpent ?? 0).toLocaleString()}`}
+          icon={Award}
+          color="#10b981"
+        />
+        <Kpi
+          label="Loyalty Tier"
+          value={overview?.loyaltyTier || 'Bronze'}
+          icon={Award}
+          color="#f59e0b"
+        />
+        {overview?.lastOrderDate && (
+          <Kpi
+            label="Last Order"
+            value={new Date(overview.lastOrderDate).toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric',
+            })}
+            icon={Calendar}
+            color="#8b5cf6"
+          />
+        )}
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 mt-6">
-        <motion.div
-          className="rounded-2xl bg-white p-4 shadow"
-          initial={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          variants={variants.fadeUp}
+      <Panel
+        title="Your Account"
+        description="Quick access to your account features"
+      >
+        <div className="mt-4 space-y-3">
+          <motion.a
+            href="/dashboard/customer?section=Order%20History"
+            className="block rounded-lg border border-sky-400/20 bg-sky-400/10 p-3 text-sm text-sky-300 transition-colors hover:bg-sky-400/20"
+            whileHover={{ x: 4 }}
+          >
+            → View your orders
+          </motion.a>
+          <motion.a
+            href="/dashboard/customer?section=Saved%20Addresses"
+            className="block rounded-lg border border-emerald-400/20 bg-emerald-400/10 p-3 text-sm text-emerald-300 transition-colors hover:bg-emerald-400/20"
+            whileHover={{ x: 4 }}
+          >
+            → Manage addresses
+          </motion.a>
+          <motion.a
+            href="/dashboard/customer?section=My%20Reviews"
+            className="block rounded-lg border border-amber-400/20 bg-amber-400/10 p-3 text-sm text-amber-300 transition-colors hover:bg-amber-400/20"
+            whileHover={{ x: 4 }}
+          >
+            → Your reviews
+          </motion.a>
+        </div>
+      </Panel>
+
+      {overview?.nextReward && (
+        <Panel
+          title="Next Reward"
+          description={`${overview.nextReward} · Keep shopping to earn more!`}
         >
-          <h3 className="text-sm font-medium">Activity Minutes by Hour</h3>
-          <div style={{ width: '100%', height: 200 }}>
-            <ResponsiveContainer>
-              <AreaChart
-                data={
-                  hourlyChart.length
-                    ? hourlyChart
-                    : [{ hour: '00:00', minutes: 0 }]
-                }
-              >
-                <defs>
-                  <linearGradient id="colorSpent" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#d4a373" stopOpacity={0.9} />
-                    <stop offset="100%" stopColor="#1A120B" stopOpacity={0.1} />
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="hour" />
-                <YAxis />
-                <Tooltip />
-                <Area
-                  type="monotone"
-                  dataKey="minutes"
-                  stroke="#1A120B"
-                  fill="url(#colorSpent)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+          <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-slate-700">
+            <motion.div
+              className="h-full bg-gradient-to-r from-sky-500 to-sky-400"
+              initial={{ width: 0 }}
+              animate={{ width: `${Math.min((overview?.totalSpent ?? 0) / 500, 1) * 100}%` }}
+              transition={{ duration: 1 }}
+            />
           </div>
-        </motion.div>
-
-        <motion.div
-          className="rounded-2xl bg-white p-4 shadow"
-          initial={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          variants={variants.fadeUp}
-        >
-          <h3 className="text-sm font-medium">Actions this quarter</h3>
-          <div style={{ width: '100%', height: 200 }}>
-            <ResponsiveContainer>
-              <BarChart
-                data={
-                  monthlyChart.length
-                    ? monthlyChart
-                    : [{ month: 'Jan', actions: 0 }]
-                }
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="actions" fill="#c9854d" />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="mt-2 text-xs text-slate-400">
+            ${(overview?.totalSpent ?? 0).toLocaleString()} / $500 to Gold tier
           </div>
-        </motion.div>
-      </div>
-
-      <div className="mt-6 rounded-2xl bg-white p-4 shadow">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h3 className="text-sm font-medium">Purchase History</h3>
-            <p className="mt-2 text-sm text-[#6e4b33]">
-              Your recent orders and reorder actions are shown here.
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-4 overflow-x-auto">
-          {ordersLoading ? (
-            <Skeleton rows={6} />
-          ) : ordersError ? (
-            <div className="rounded-2xl border border-[#e76f51]/20 bg-[#fff1ef] p-4 text-sm text-[#b74930]">
-              Unable to load orders right now.
-            </div>
-          ) : orders.length === 0 ? (
-            <div className="rounded-2xl border border-[#d4a373]/20 bg-[#fbf7f2] p-6 text-sm text-[#6e4b33]">
-              No orders found yet. Once you place an order, it will appear here.
-            </div>
-          ) : (
-            <table className="w-full min-w-180 table-auto text-sm text-[#6e4b33]">
-              <thead>
-                <tr className="text-left text-[#6e4b33]">
-                  <th className="pb-3">Order</th>
-                  <th className="pb-3">Date</th>
-                  <th className="pb-3">Items</th>
-                  <th className="pb-3">Total</th>
-                  <th className="pb-3">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orders.map((order) => (
-                  <tr key={order.id} className="border-t border-[#e9e1d6]">
-                    <td className="py-3 font-semibold text-[#1a0f0a]">
-                      <code className="font-mono text-xs">{order.id}</code>
-                    </td>
-                    <td>{new Date(order.createdAt).toLocaleDateString()}</td>
-                    <td>
-                      {order.items.reduce(
-                        (sum, item) => sum + item.quantity,
-                        0
-                      )}{' '}
-                      items
-                    </td>
-                    <td>{formatCurrency(order.total)}</td>
-                    <td>
-                      <button
-                        type="button"
-                        onClick={() => handleReorder(order.id)}
-                        className="rounded-full bg-[#e76f51] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#c9854d]"
-                      >
-                        Reorder
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
+        </Panel>
+      )}
     </div>
   );
 }

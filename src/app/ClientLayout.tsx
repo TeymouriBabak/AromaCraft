@@ -16,5 +16,9 @@ export default function ClientLayout({
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, [pathname]);
 
+  if (pathname?.startsWith('/dashboard')) {
+    return <>{children}</>;
+  }
+
   return <SiteShell>{children}</SiteShell>;
 }

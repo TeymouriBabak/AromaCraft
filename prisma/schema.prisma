@@ -30,6 +30,7 @@ model User {
   isBanned           Boolean             @default(false)
   orders             Order[]
   reviews            Review[]
+  refundRequests     RefundRequest[]
   sessions           Session[]
   activities         UserActivity[]
   verificationTokens VerificationToken[]
@@ -55,58 +56,153 @@ model Session {
 }
 
 model Product {
-  id           Int         @id
-  slug         String      @unique
-  catalog      String      @default("shop") // "shop" | "home"
-  name         String
-  brand        String
-  price        Decimal     @db.Decimal(12, 2)
-  rating       Float
-  reviews      Int
-  image        String
-  roast        String
-  process      String
-  origin       String
-  originRegion String
-  country      String
-  coffeeType   String
-  body         String
-  acidity      String
-  sweetness    String
-  size         String
-  description  String
-  inStock      Boolean     @default(true)
-  inventory Int @default(100)
-  brewMethods  Json
-  grindTypes   Json
-  tastingNotes Json
-  specialTags  Json
-  originalPrice        Float?
-  badge                String?
-  imageAlt             String?
-  subscriptionEligible Boolean  @default(false)
+  id               Int         @id
+  slug             String      @unique
+  catalog          String      @default("shop") // "shop" | "home"
+  name             String
+  brand            String
+  price            Decimal     @db.Decimal(12, 2)
+  rating           Float
+  reviews          Int
+  image            String
+  roast            String
+  process          String
+  origin           String
+  originRegion     String
+  country          String
+  coffeeType       String
+  body             String
+  acidity          String
+  sweetness        String
+  size             String
+  description      String
+  inStock          Boolean     @default(true)
+  inventory        Int         @default(100)
+  lowStockThreshold Int         @default(5)
+  status           String      @default("active")
+  brewMethods      Json
+  grindTypes       Json
+  tastingNotes     Json
+  specialTags      Json
+  originalPrice    Float?
+  badge            String?
+  imageAlt         String?
+  subscriptionEligible Boolean @default(false)
   subscriptionSavings  Float?
   altitude             String?
   variety              String?
   notes                String?
-  orderItems    OrderItem[]
-  wishlistItems WishlistItem[]
+  orderItems       OrderItem[]
+  wishlistItems    WishlistItem[]
+}
+
+model Brand {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?  @db.Text
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ShopFilter {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  label     String
+  type      String   @default("select")
+  options   Json?
+  sortOrder Int      @default(0)
+  isVisible Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model HomepageSection {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  title     String
+  content   String   @db.Text
+  image     String?
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sortOrder])
+  @@index([isActive])
+}
+
+model PromotionalBanner {
+  id        String   @id @default(cuid())
+  title     String
+  image     String
+  link      String?
+  startsAt  DateTime?
+  endsAt    DateTime?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([startsAt, endsAt])
+}
+
+model OurStory {
+  id        String   @id @default("default")
+  title     String
+  body      String   @db.Text
+  image     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model FaqEntry {
+  id        String   @id @default(cuid())
+  question  String
+  answer    String   @db.Text
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sortOrder])
+  @@index([isActive])
 }
 
 model Order {
-  id          String      @id @default(cuid())
-  userId      String?
-  status      OrderStatus @default(PENDING)
-  subtotal    Decimal     @db.Decimal(12, 0)
-  shippingFee Decimal     @db.Decimal(12, 0)
-  total       Decimal     @db.Decimal(12, 0)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  user        User?       @relation(fields: [userId], references: [id])
-  items       OrderItem[]
+  id             String          @id @default(cuid())
+  userId         String?
+  status         OrderStatus     @default(PENDING)
+  subtotal       Decimal         @db.Decimal(12, 0)
+  shippingFee    Decimal         @db.Decimal(12, 0)
+  total          Decimal         @db.Decimal(12, 0)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  user           User?           @relation(fields: [userId], references: [id])
+  items          OrderItem[]
+  refundRequests RefundRequest[]
 
   @@index([userId])
   @@index([status])
+}
+
+model RefundRequest {
+  id          String              @id @default(cuid())
+  orderId     String
+  userId      String?
+  requestedAt DateTime            @default(now())
+  amount      Decimal             @db.Decimal(12, 0)
+  reason      String              @db.Text
+  status      RefundRequestStatus @default(REQUESTED)
+  decisionAt  DateTime?
+  decidedBy   String?
+  order       Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user        User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([status])
+  @@index([requestedAt])
 }
 
 model UserActivity {
@@ -131,7 +227,11 @@ model Review {
   title     String     @db.VarChar(160)
   content   String     @db.Text
   type      ReviewType @default(HOME)
+  status    ReviewStatus @default(PENDING)
   createdAt DateTime   @default(now())
+  moderatedAt DateTime?
+  moderatedBy String?
+  rejectionReason String? @db.Text
   hiddenAt  DateTime?
   hiddenBy  String?
   isHidden  Boolean    @default(false)
@@ -220,6 +320,18 @@ enum OrderStatus {
 enum ReviewType {
   HOME
   PRODUCT
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum RefundRequestStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
 }
 
 enum VerificationTokenType {

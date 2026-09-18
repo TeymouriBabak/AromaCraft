@@ -74,10 +74,23 @@ async function parseResponse<T>(res: Response): Promise<T> {
   const text = await res.text();
   let payload: unknown = null;
 
+  // Check content-type header to detect HTML instead of JSON
+  const contentType = res.headers.get('content-type') || '';
+  if (!res.ok && !contentType.includes('application/json')) {
+    const message = `Expected JSON from ${res.url}, received ${contentType || 'text/html'} (status ${res.status})`;
+    throw new ApiError(message, res.status, 'invalid_content_type');
+  }
+
   if (text) {
     try {
       payload = JSON.parse(text);
     } catch {
+      // If JSON parsing fails on a non-OK response, it's likely HTML error page
+      if (!res.ok) {
+        const message = `Expected JSON from ${res.url}, received unparseable response (status ${res.status}). Response starts with: ${text.substring(0, 100)}`;
+        throw new ApiError(message, res.status, 'invalid_json_response');
+      }
+      // For OK responses with invalid JSON, preserve the parsing error behavior
       payload = text;
     }
   }
@@ -106,9 +119,9 @@ async function parseResponse<T>(res: Response): Promise<T> {
     );
   }
 
-  if (payload && typeof payload === 'object' && 'ok' in payload) {
+  if (payload && typeof payload === 'object' && 'success' in payload) {
     const wrappedPayload = payload as Record<string, unknown>;
-    if (wrappedPayload.ok) {
+    if (wrappedPayload.success) {
       return (wrappedPayload.data as T) ?? (null as T);
     }
     const errorPayload = wrappedPayload.error as

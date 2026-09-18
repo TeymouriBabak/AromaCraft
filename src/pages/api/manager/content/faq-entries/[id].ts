@@ -1,0 +1,7 @@
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { z } from 'zod';
+import { requireRole } from '@/lib/auth-utils';
+import { jsonError, jsonSuccess } from '@/lib/api-utils';
+import { prisma } from '@/lib/prisma';
+const schema = z.object({ question: z.string().trim().min(2).max(300).optional(), answer: z.string().trim().min(1).max(10000).optional(), sortOrder: z.coerce.number().int().min(0).optional(), isActive: z.boolean().optional() });
+export default async function handler(req: NextApiRequest, res: NextApiResponse) { const auth = await requireRole(req, res, ['manager', 'admin']); if (!auth) return; const id = typeof req.query.id === 'string' ? req.query.id : ''; try { const existing = await prisma.faqEntry.findUnique({ where: { id } }); if (!existing) return jsonError(res, 'not_found', 'FAQ entry not found.', 404); if (req.method === 'PATCH') { const parsed = schema.safeParse(req.body); if (!parsed.success) return jsonError(res, 'invalid_request', 'Invalid FAQ entry.', 400, parsed.error.flatten()); return jsonSuccess(res, { item: await prisma.faqEntry.update({ where: { id }, data: parsed.data }) }, 200); } if (req.method === 'DELETE') { await prisma.faqEntry.delete({ where: { id } }); return jsonSuccess(res, { deleted: true, id }, 200); } return jsonError(res, 'method_not_allowed', 'Method not allowed.', 405); } catch (error) { console.error('[manager/content/faq-entries/:id] failed', error); return jsonError(res, 'server_error', 'Unable to update FAQ entry.', 500); } }

@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 const SESSION_COOKIE_NAME = 'aromacraft_sid';
 const protectedPagePrefixes = ['/dashboard', '/account'];
-const protectedApiPrefixes = ['/api/dashboard'];
+const protectedApiPrefixes = ['/api/dashboard', '/api/manager'];
 
 function startsWithPrefix(pathname: string, prefixes: string[]) {
   return prefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`));
@@ -44,6 +44,7 @@ export const config = {
     '/dashboard/:path*',
     '/account/:path*',
     '/api/dashboard/:path*',
+    '/api/manager/:path*',
     '/api/dev/:path*',
   ],
 };

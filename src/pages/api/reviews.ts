@@ -13,34 +13,15 @@ import {
 } from '@/lib/review-utils';
 import { createReviewSchema } from '@/lib/validators/review';
 
-const defaultReviews = [
-  {
-    id: 'default-1',
-    destination: 'home',
-    title: 'Home',
-    rating: 5,
-    content:
-      'A calm, confident experience from discovery to delivery. Everything feels premium and effortless.',
-    author: 'Amelia',
-  },
-  {
-    id: 'default-2',
-    destination: 'pike-place',
-    title: 'Pike Place',
-    rating: 5,
-    content:
-      'A luxurious daily ritual with the smoothness and consistency I want in a neighborhood coffee favorite.',
-    author: 'Noah',
-  },
-];
-
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
   if (req.method === 'GET') {
     try {
+      const productId = typeof req.query.productId === 'string' ? req.query.productId : undefined;
       const reviews = await prisma.review.findMany({
+        where: { status: 'APPROVED', ...(productId ? { productId } : {}) },
         orderBy: { createdAt: 'desc' },
         take: 30,
         include: { user: { select: { id: true, name: true } } },
@@ -62,7 +43,7 @@ export default async function handler(
       return jsonSuccess(
         res,
         {
-          reviews: mapped.length ? mapped : defaultReviews,
+            reviews: mapped,
         },
         200
       );

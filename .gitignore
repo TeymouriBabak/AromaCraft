@@ -30,9 +30,10 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files (only the example template is committed)
 .env
 .env.local
+.env.*
 .env.*.local
 !.env.example
 
@@ -50,6 +51,7 @@ next-env.d.ts
 
 # Local editor settings
 /.vscode/
+/.codeatlas/
 
 # Local backups
 /backups/
@@ -60,6 +62,59 @@ next-env.d.ts
 /login_body.txt
 /logout_body.txt
 /me_body.txt
+/*_cookie.txt
+/*_cookies.txt
+/*_headers.txt
+/*_body.txt
+/admin-api.txt
+/admin-page.html
+/customer-api-test.txt
+/customer-cookies.txt
+/forbidden_headers.txt
+/login.txt
+/role_mismatch_headers.txt
+/role_mismatch_body.txt
+/body.json
+/verify-login-response.txt
+/verify_headers.txt
+/verified_*.txt
+/wrong_pw_*.txt
+/signup*_headers.txt
+/user_login_body.txt
+/user_login_headers.txt
+/user_cookie*.txt
+
+# Local runtime data and generated media
+/public/uploads/avatars/
+/dev-server.log
+/seed-output.log
+/logs.txt
+/build-output.txt
+/vitest-output.txt
+/security-test-results.txt
+/final-security-tests.txt
+
+# Local audit and diagnostic output
+/AUDIT-READ-ONLY-COMPLETE.md
+/FINAL-VERIFICATION-REPORT.md
+/INVESTIGATION-REPORT.md
+/PHASE_COMPLETION_REPORT.md
+/VERIFICATION-REPORT.md
+/check-db-schema.js
+/check-orders-direct.js
+/count-rows.cjs
+/count-rows.ts
+/create-test-session.js
+/list-users.mjs
+/query-orders.sql
+/tmp-check.js
+/tmp-check.ts
+/test-auth.ps1
+/test-endpoints.sh
+/scripts/check-db-counts.mjs
+/scripts/list-users.ts
+/scripts/seed-manager-audit-data.ts
+/.eslint-report.json
 
 # Generated reports
 /lint-report.json

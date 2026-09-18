@@ -1,9 +1,0 @@
-HTTP/1.1 401 Unauthorized
-Content-Type: application/json; charset=utf-8
-ETag: "6pixgl3lvc2f"
-Content-Length: 87
-Vary: Accept-Encoding
-Date: Wed, 19 Aug 2026 09:59:29 GMT
-Connection: keep-alive
-Keep-Alive: timeout=5
-

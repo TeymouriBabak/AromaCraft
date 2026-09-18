@@ -1,6 +1,8 @@
 # AromaCraft
 
-AromaCraft is a fully local, offline-capable premium coffee storefront built with Next.js App Router, Prisma, and MariaDB.
+AromaCraft is a refined, offline-capable coffee marketplace for discovering exceptional beans, managing orders, and enjoying a seamless brew-to-door experience, powered by Next.js, Prisma, and MariaDB.
+
+> Installation instructions: **[Add installation steps here]**
 
 ## Local development
 

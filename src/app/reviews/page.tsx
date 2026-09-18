@@ -158,7 +158,7 @@ export default function ReviewsPage() {
       });
       const payload = await response.json();
 
-      if (!response.ok || payload?.ok === false) {
+      if (!response.ok || payload?.success === false) {
         throw new Error(
           payload?.error?.message || 'Unable to save your review.'
         );
@@ -190,7 +190,7 @@ export default function ReviewsPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-      <div className="mb-8 rounded-[2rem] border border-[#d4a373]/20 bg-[#f9f6f0] p-8 shadow-sm dark:bg-[#23110c]">
+      <div className="mb-8 rounded-4xl border border-[#d4a373]/20 bg-[#f9f6f0] p-8 shadow-sm dark:bg-[#23110c]">
         <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#b56e3b]">
           Community voices
         </p>
@@ -199,7 +199,7 @@ export default function ReviewsPage() {
         </h1>
       </div>
 
-      <div className="mb-8 rounded-[2rem] border border-[#d4a373]/20 bg-white/80 p-5 shadow-sm dark:bg-[#1a0f0a]">
+      <div className="mb-8 rounded-4xl border border-[#d4a373]/20 bg-white/80 p-5 shadow-sm dark:bg-[#1a0f0a]">
         <div className="mb-4 flex items-center justify-between gap-3">
           <h2 className="font-serif text-2xl text-[#1a0f0a] dark:text-[#f6e5d1]">
             Leave a note
@@ -266,7 +266,7 @@ export default function ReviewsPage() {
       </div>
 
       <div className="space-y-8">
-        <section className="rounded-[2rem] border border-[#d4a373]/20 bg-white/80 p-5 shadow-sm dark:bg-[#1a0f0a]">
+        <section className="rounded-4xl border border-[#d4a373]/20 bg-white/80 p-5 shadow-sm dark:bg-[#1a0f0a]">
           <div className="mb-5 flex items-center justify-between">
             <h2 className="font-serif text-2xl text-[#1a0f0a] dark:text-[#f6e5d1]">
               Home experience
@@ -287,7 +287,7 @@ export default function ReviewsPage() {
           />
         </section>
 
-        <section className="rounded-[2rem] border border-[#d4a373]/20 bg-white/80 p-5 shadow-sm dark:bg-[#1a0f0a]">
+        <section className="rounded-4xl border border-[#d4a373]/20 bg-white/80 p-5 shadow-sm dark:bg-[#1a0f0a]">
           <div className="mb-5 flex items-center justify-between">
             <h2 className="font-serif text-2xl text-[#1a0f0a] dark:text-[#f6e5d1]">
               Pike Place comments

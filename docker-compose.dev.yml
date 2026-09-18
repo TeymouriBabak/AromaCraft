@@ -6,9 +6,10 @@ services:
       - '127.0.0.1:6399:6379'
     healthcheck:
       test: ['CMD', 'redis-cli', '-h', 'redis', '-p', '6379', 'ping']
-      interval: 5s
-      timeout: 3s
-      retries: 10
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   mariadb:
     image: mariadb:10.11
@@ -59,12 +60,14 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped
+    stop_grace_period: 30s
     ports:
       - '127.0.0.1:3000:3000'
     env_file:
       - .env
     environment:
       NODE_ENV: ${NODE_ENV:-development}
+      NODE_OPTIONS: --max-old-space-size=1536
       DATABASE_URL: '${DATABASE_URL:?DATABASE_URL must be set in .env}'
       REDIS_URL: 'redis://redis:6379'
       DOCKER_ENVIRONMENT: 'true'
@@ -73,11 +76,17 @@ services:
       SMTP_HOST: mailpit
       SMTP_PORT: 1025
       USE_MOCKS: ${USE_MOCKS}
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fsS http://localhost:3000/api/health || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
     volumes:
       - ./:/usr/src/app:cached
-      - /usr/src/app/node_modules
-      - /usr/src/app/.next
-      - /usr/src/app/src/generated/prisma
+      - app_node_modules:/usr/src/app/node_modules
+      - app_next_cache:/usr/src/app/.next
+      - app_prisma_generated:/usr/src/app/src/generated/prisma
       - storage-vol:/usr/src/app/public/uploads
     depends_on:
       mariadb:
@@ -92,5 +101,8 @@ services:
 volumes:
   mariadb_data:
     driver: local
+  app_node_modules:
+  app_next_cache:
+  app_prisma_generated:
   storage-vol:
     driver: local

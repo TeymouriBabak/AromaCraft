@@ -1,9 +1,0 @@
-HTTP/1.1 400 Bad Request
-Content-Type: application/json; charset=utf-8
-ETag: "jpn4yfto7a2f"
-Content-Length: 87
-Vary: Accept-Encoding
-Date: Wed, 19 Aug 2026 09:59:28 GMT
-Connection: keep-alive
-Keep-Alive: timeout=5
-

@@ -14,4 +14,10 @@ tests
 !tests/
 !tests/**
 *.tgz
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.bmp
 .DS_Store

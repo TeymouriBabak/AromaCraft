@@ -1,0 +1,7 @@
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { z } from 'zod';
+import { requireRole } from '@/lib/auth-utils';
+import { jsonError, jsonSuccess } from '@/lib/api-utils';
+import { prisma } from '@/lib/prisma';
+const schema = z.object({ title: z.string().trim().min(2).max(160), image: z.string().url(), link: z.string().url().or(z.literal('')).optional(), startsAt: z.coerce.date().nullable().optional(), endsAt: z.coerce.date().nullable().optional(), isActive: z.boolean().default(true) }).refine((value) => !value.startsAt || !value.endsAt || value.startsAt <= value.endsAt, { message: 'End date must be after start date.', path: ['endsAt'] });
+export default async function handler(req: NextApiRequest, res: NextApiResponse) { const auth = await requireRole(req, res, ['manager', 'admin']); if (!auth) return; try { if (req.method === 'GET') return jsonSuccess(res, { items: await prisma.promotionalBanner.findMany({ orderBy: { createdAt: 'desc' } }) }, 200); if (req.method === 'POST') { const parsed = schema.safeParse(req.body); if (!parsed.success) return jsonError(res, 'invalid_request', 'Invalid promotional banner.', 400, parsed.error.flatten()); return jsonSuccess(res, { item: await prisma.promotionalBanner.create({ data: parsed.data }) }, 201); } return jsonError(res, 'method_not_allowed', 'Method not allowed.', 405); } catch (error) { console.error('[manager/content/promotional-banners] failed', error); return jsonError(res, 'server_error', 'Unable to load or save promotional banners.', 500); } }

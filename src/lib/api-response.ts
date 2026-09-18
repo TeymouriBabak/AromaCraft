@@ -5,13 +5,14 @@
 import type { NextApiResponse } from 'next';
 
 export type ApiResponseFormat<T = unknown> = {
+  ok: boolean;
   success: boolean;
   data?: T;
   error?: {
     code: string;
     message: string;
     details?: unknown;
-  };
+  } | null;
 };
 
 /**
@@ -23,8 +24,10 @@ export function sendSuccess<T>(
   statusCode: number = 200
 ): void {
   res.status(statusCode).json({
+    ok: true,
     success: true,
     data,
+    error: null,
   } as ApiResponseFormat<T>);
 }
 
@@ -49,7 +52,9 @@ export function sendError(
     errorObject.details = details;
   }
   res.status(statusCode).json({
+    ok: false,
     success: false,
+    data: null,
     error: errorObject,
   } as ApiResponseFormat);
 }
